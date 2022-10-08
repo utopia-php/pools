@@ -1,6 +1,6 @@
 <?php
 
-namespace Utopia\Database;
+namespace Utopia\Pools;
 
 class Pools
 {
@@ -28,13 +28,16 @@ class Pools
         unset($this->pools[$name]);
         return $this;
     }
-
+    
     /**
      * @return self
      */
     public function fill(): self
     {
-
+        foreach ($this->pools as $pool) {
+            $pool->fill();
+        }
+        
         return $this;
     }
     /**
@@ -42,6 +45,9 @@ class Pools
      */
     public function reset(): self
     {
+        foreach ($this->pools as $pool) {
+            $pool->reset();
+        }
         
         return $this;
     }

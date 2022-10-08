@@ -62,7 +62,7 @@ class Pool
         }
 
         $connection = array_pop($this->pool);
-        $this->active[get_resource_id($connection)] = $connection;
+        $this->active[$connection->getID()] = $connection;
 
         return $connection;
     }
@@ -74,7 +74,7 @@ class Pool
     public function push(Connection $connection): self
     {
         array_push($this->pool, $connection);
-        unset($this->active[get_resource_id($connection)]);
+        unset($this->active[$connection->getID()]);
 
         return $this;
     }
@@ -134,11 +134,11 @@ class Pool
      */
     public function fill(): self
     {
-        $this->reset();
+        $this->pool = [];
 
         for ($i=0; $i < $this->size; $i++) { 
             $attempts = 0;
-            
+
             do {
                 try {
                     $attempts++;
@@ -173,7 +173,9 @@ class Pool
      */
     public function reset(): self
     {
-        $this->pool = [];
+        foreach ($this->active as $connection) {
+            $this->push($connection);
+        }
         return $this;
     }
     

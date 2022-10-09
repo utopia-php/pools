@@ -25,6 +25,7 @@ composer require utopia-php/pools
 ```php
 use PDO;
 use Utopia\Pools\Pool;
+use Utopia\Pools\Group;
 
 $pool = new Pool('mysql-pool', 1 /* number of connections */, function() {
     $host = '127.0.0.1';

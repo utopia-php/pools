@@ -154,7 +154,7 @@ class Pool
 
             $connection->setID($this->getName().'-'.$i);
             
-            $pool[$i] = $connection;
+            $this->pool[$i] = $connection;
         }
 
         return $this;

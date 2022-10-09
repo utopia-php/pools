@@ -12,7 +12,7 @@
         }
     ],
     "autoload": {
-        "psr-4": {"Utopia\\Database\\": "src/Pools"}
+        "psr-4": {"Utopia\\Pools\\": "src/Pools"}
     },
     "autoload-dev": {
         "psr-4": {"Utopia\\Tests\\": "tests/Pools"}

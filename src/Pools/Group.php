@@ -2,7 +2,9 @@
 
 namespace Utopia\Pools;
 
-class Pools
+use Exception;
+
+class Group
 {
     /**
      * @var Pool[]
@@ -17,6 +19,19 @@ class Pools
     {
         $this->pools[$pool->getName()] = $pool;
         return $this;
+    }
+    
+    /**
+     * @var string $name
+     * @return ?Pool
+     */
+    public function get(string $name): ?Pool
+    {
+        if(!isset($this->pools[$name])) {
+            throw new Exception('Pool not found');
+        }
+
+        return $this->pools[$name];
     }
 
     /**
@@ -40,6 +55,7 @@ class Pools
         
         return $this;
     }
+    
     /**
      * @return self
      */

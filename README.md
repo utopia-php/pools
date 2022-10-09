@@ -64,8 +64,8 @@ $pool->isFull(); // Check if the pool is full
 $group = new Group(); // Create a group of pools
 $group->add($pool); // Add a pool to the group
 $group->get('mysql-pool'); // Get a pool from the group
-$group->setReconnectAttempts(3); // Set the number of reconnect attempts for all pools in the group
-$group->setReconnectSleep(5); // Set the sleep time between reconnect attempts for all pools in the group
+$group->setReconnectAttempts(3); // Set the number of reconnect attempts for all pools
+$group->setReconnectSleep(5); // Set the sleep time between reconnect attempts for all pools
 ```
 
 ## System Requirements

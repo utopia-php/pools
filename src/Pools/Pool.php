@@ -24,12 +24,12 @@ class Pool
     /**
      * @var int
      */
-    protected $reconnectAttempts = 3;
+    protected int $reconnectAttempts = 3;
 
     /**
      * @var int
      */
-    protected $reconnectSleep = 1; // seconds
+    protected int $reconnectSleep = 1; // seconds
 
     /**
      * @var array

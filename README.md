@@ -10,9 +10,9 @@ Although this library is part of the [Utopia Framework](https://github.com/utopi
 
 ## Concepts
 
-**Pool** - A list of long living connections. You can pop connections out and use them and push them back to the pool for reuse.
-**Connection** - An object that holds a long living database or other external connection in a form of a resource. PDO object or a Redis client are examples of resources that can be used inside a connection.
-**Group** - A group of multiple pools.
+* **Pool** - A list of long living connections. You can pop connections out and use them and push them back to the pool for reuse.
+* **Connection** - An object that holds a long living database or other external connection in a form of a resource. PDO object or a Redis client are examples of resources that can be used inside a connection.
+* **Group** - A group of multiple pools.
 
 ## Getting Started
 

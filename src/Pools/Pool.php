@@ -71,7 +71,7 @@ class Pool
     /**
      * @return int
      */
-    public function getRecconectAttempts(): int
+    public function getReconnectAttempts(): int
     {
         return $this->reconnectAttempts;
     }
@@ -88,7 +88,7 @@ class Pool
     /**
      * @return int
      */
-    public function getRecconectSleep(): int
+    public function getReconnectSleep(): int
     {
         return $this->reconnectSleep;
     }
@@ -96,7 +96,7 @@ class Pool
     /**
      * @return self
      */
-    public function setRecconectSleep(int $reconnectSleep): self
+    public function setReconnectSleep(int $reconnectSleep): self
     {
         $this->reconnectSleep = $reconnectSleep;
         return $this;
@@ -118,12 +118,12 @@ class Pool
                     $connection = new Connection(($this->init)());
                     break; // leave loop if successful
                 } catch (\Exception $e) {
-                    if ($attempts >= $this->getRecconectAttempts()) {
+                    if ($attempts >= $this->getReconnectAttempts()) {
                         throw new \Exception('Failed to create connection: ' . $e->getMessage());
                     }
-                    sleep($this->getRecconectSleep());
+                    sleep($this->getReconnectSleep());
                 }
-            } while ($attempts < $this->getRecconectAttempts());
+            } while ($attempts < $this->getReconnectAttempts());
 
             $connection->setID($this->getName().'-'.$i);
             

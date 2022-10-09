@@ -33,32 +33,32 @@ class PoolTest extends TestCase
         $this->assertEquals(5, $this->object->getSize());
     }
 
-    public function testGetRecconectAttempts()
+    public function testGetReconnectAttempts()
     {
-        $this->assertEquals(3, $this->object->getRecconectAttempts());
+        $this->assertEquals(3, $this->object->getReconnectAttempts());
     }
 
-    public function testSetRecconectAttempts()
+    public function testSetReconnectAttempts()
     {
-        $this->assertEquals(3, $this->object->getRecconectAttempts());
+        $this->assertEquals(3, $this->object->getReconnectAttempts());
         
         $this->object->setReconnectAttempts(20);
 
-        $this->assertEquals(20, $this->object->getRecconectAttempts());
+        $this->assertEquals(20, $this->object->getReconnectAttempts());
     }
 
-    public function testGetRecconectSleep()
+    public function testGetReconnectSleep()
     {
-        $this->assertEquals(1, $this->object->getRecconectSleep());
+        $this->assertEquals(1, $this->object->getReconnectSleep());
     }
 
-    public function testSetRecconectSleep()
+    public function testSetReconnectSleep()
     {
-        $this->assertEquals(1, $this->object->getRecconectSleep());
+        $this->assertEquals(1, $this->object->getReconnectSleep());
         
-        $this->object->setRecconectSleep(20);
+        $this->object->setReconnectSleep(20);
 
-        $this->assertEquals(20, $this->object->getRecconectSleep());
+        $this->assertEquals(20, $this->object->getReconnectSleep());
     }
 
     public function testFill()

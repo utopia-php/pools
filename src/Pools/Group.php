@@ -88,7 +88,7 @@ class Group
     public function setReconnectSleep(int $reconnectSleep): self
     {
         foreach ($this->pools as $pool) {
-            $pool->setRecconectSleep($reconnectSleep);
+            $pool->setReconnectSleep($reconnectSleep);
         }
         
         return $this;

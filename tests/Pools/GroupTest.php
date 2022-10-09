@@ -107,11 +107,11 @@ class GroupTest extends TestCase
             return 'x';
         }));
 
-        $this->assertEquals(3, $this->object->get('test')->getRecconectAttempts());
+        $this->assertEquals(3, $this->object->get('test')->getReconnectAttempts());
         
         $this->object->setReconnectAttempts(5);
         
-        $this->assertEquals(5, $this->object->get('test')->getRecconectAttempts());
+        $this->assertEquals(5, $this->object->get('test')->getReconnectAttempts());
     }
 
     public function testReconnectSleep()
@@ -120,10 +120,10 @@ class GroupTest extends TestCase
             return 'x';
         }));
 
-        $this->assertEquals(1, $this->object->get('test')->getRecconectSleep());
+        $this->assertEquals(1, $this->object->get('test')->getReconnectSleep());
         
         $this->object->setReconnectSleep(2);
         
-        $this->assertEquals(2, $this->object->get('test')->getRecconectSleep());
+        $this->assertEquals(2, $this->object->get('test')->getReconnectSleep());
     }
 }

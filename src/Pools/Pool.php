@@ -53,33 +53,6 @@ class Pool
     }
 
     /**
-     * @return Connection
-     */
-    public function pop(): Connection
-    {
-        if (empty($this->pool)) {
-            throw new Exception('Pool is empty');
-        }
-
-        $connection = array_pop($this->pool);
-        $this->active[$connection->getID()] = $connection;
-
-        return $connection;
-    }
-
-    /**
-     * @param Connection $connection
-     * @return self
-     */
-    public function push(Connection $connection): self
-    {
-        array_push($this->pool, $connection);
-        unset($this->active[$connection->getID()]);
-
-        return $this;
-    }
-
-    /**
      * @return string
      */
     public function getName(): string
@@ -156,6 +129,33 @@ class Pool
             
             $this->pool[$i] = $connection;
         }
+
+        return $this;
+    }
+
+    /**
+     * @return Connection
+     */
+    public function pop(): Connection
+    {
+        if (empty($this->pool)) {
+            throw new Exception('Pool is empty');
+        }
+
+        $connection = array_pop($this->pool);
+        $this->active[$connection->getID()] = $connection;
+
+        return $connection;
+    }
+
+    /**
+     * @param Connection $connection
+     * @return self
+     */
+    public function push(Connection $connection): self
+    {
+        array_push($this->pool, $connection);
+        unset($this->active[$connection->getID()]);
 
         return $this;
     }

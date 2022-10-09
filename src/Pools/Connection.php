@@ -7,12 +7,12 @@ class Connection {
     /**
      * @var string
      */
-    protected string $id;
+    protected string $id = '';
 
     /**
-     * @var mixed $connection
+     * @var mixed $resource
      */
-    public function __construct(protected mixed $connection)
+    public function __construct(protected mixed $resource)
     {
     }
     
@@ -36,18 +36,18 @@ class Connection {
     /**
      * @return mixed
      */
-    public function getConnection(): mixed
+    public function getResource(): mixed
     {
-        return $this->connection;
+        return $this->resource;
     }
 
     /**
-     * @param mixed $connection
+     * @param mixed $resource
      * @return self
      */
-    public function setConnection(mixed $connection): self
+    public function setResource(mixed $resource): self
     {
-        $this->connection = $connection;
+        $this->resource = $resource;
         return $this;
     }
 }

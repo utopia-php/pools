@@ -23,9 +23,9 @@ class Group
     
     /**
      * @var string $name
-     * @return ?Pool
+     * @return Pool
      */
-    public function get(string $name): ?Pool
+    public function get(string $name): Pool
     {
         if(!isset($this->pools[$name])) {
             throw new Exception('Pool not found');

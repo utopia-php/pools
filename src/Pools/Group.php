@@ -55,10 +55,10 @@ class Group
     /**
      * @return self
      */
-    public function reset(): self
+    public function reclaim(): self
     {
         foreach ($this->pools as $pool) {
-            $pool->reset();
+            $pool->reclaim();
         }
         
         return $this;

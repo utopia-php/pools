@@ -54,7 +54,7 @@ $connection->getResource(); // Get the connection resource
 
 $pool->push($connection); // Return the connection to the pool
 
-$pool->reset(); // Reset the pool, return all active connections automatically
+$pool->reclaim(); // Recalim the pool, return all active connections automatically
 
 $pool->count(); // Get the number of available connections
 

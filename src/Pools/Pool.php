@@ -174,7 +174,7 @@ class Pool
     /**
      * @return self
      */
-    public function reset(): self
+    public function reclaim(): self
     {
         foreach ($this->active as $connection) {
             $this->push($connection);

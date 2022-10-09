@@ -96,7 +96,7 @@ class GroupTest extends TestCase
 
         $this->assertEquals(2, $this->object->get('test')->count());
 
-        $this->object->reset();
+        $this->object->reclaim();
 
         $this->assertEquals(5, $this->object->get('test')->count());
     }

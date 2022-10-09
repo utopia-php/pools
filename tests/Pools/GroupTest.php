@@ -100,4 +100,30 @@ class GroupTest extends TestCase
 
         $this->assertEquals(5, $this->object->get('test')->count());
     }
+
+    public function testReconnectAttempts()
+    {
+        $this->object->add(new Pool('test', 5, function() {
+            return 'x';
+        }));
+
+        $this->assertEquals(3, $this->object->get('test')->getRecconectAttempts());
+        
+        $this->object->setReconnectAttempts(5);
+        
+        $this->assertEquals(5, $this->object->get('test')->getRecconectAttempts());
+    }
+
+    public function testReconnectSleep()
+    {
+        $this->object->add(new Pool('test', 5, function() {
+            return 'x';
+        }));
+
+        $this->assertEquals(1, $this->object->get('test')->getRecconectSleep());
+        
+        $this->object->setReconnectSleep(2);
+        
+        $this->assertEquals(2, $this->object->get('test')->getRecconectSleep());
+    }
 }

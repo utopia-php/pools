@@ -35,12 +35,12 @@ class PoolTest extends TestCase
 
     public function testGetRecconectAttempts()
     {
-        $this->assertEquals(10, $this->object->getRecconectAttempts());
+        $this->assertEquals(3, $this->object->getRecconectAttempts());
     }
 
     public function testSetRecconectAttempts()
     {
-        $this->assertEquals(10, $this->object->getRecconectAttempts());
+        $this->assertEquals(3, $this->object->getRecconectAttempts());
         
         $this->object->setReconnectAttempts(20);
 
@@ -49,12 +49,12 @@ class PoolTest extends TestCase
 
     public function testGetRecconectSleep()
     {
-        $this->assertEquals(2, $this->object->getRecconectSleep());
+        $this->assertEquals(1, $this->object->getRecconectSleep());
     }
 
     public function testSetRecconectSleep()
     {
-        $this->assertEquals(2, $this->object->getRecconectSleep());
+        $this->assertEquals(1, $this->object->getRecconectSleep());
         
         $this->object->setRecconectSleep(20);
 
@@ -68,6 +68,28 @@ class PoolTest extends TestCase
         $this->object->fill();
 
         $this->assertEquals(5, $this->object->count());
+    }
+
+    public function testFillFailure()
+    {
+        $this->object = new Pool('test', 5, function() {
+            throw new Exception();
+        });
+
+        $start = microtime(true);
+
+        $this->assertEquals(0, $this->object->count());
+        
+        try {
+            $this->object->fill();
+            $this->fail('Exception not thrown');
+        } catch (Exception $e) {
+            $this->assertInstanceOf(Exception::class, $e);
+        }
+    
+        $time = microtime(true) - $start;
+
+        $this->assertGreaterThan(2, $time);
     }
 
     public function testPop()

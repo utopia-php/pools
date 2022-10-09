@@ -67,4 +67,30 @@ class Group
         
         return $this;
     }
+
+    /**
+     * @var int $reconnectAttempts
+     * @return self
+     */
+    public function setReconnectAttempts(int $reconnectAttempts): self
+    {
+        foreach ($this->pools as $pool) {
+            $pool->setReconnectAttempts($reconnectAttempts);
+        }
+        
+        return $this;
+    }
+
+    /**
+     * @var int $reconnectAttempts
+     * @return self
+     */
+    public function setReconnectSleep(int $reconnectSleep): self
+    {
+        foreach ($this->pools as $pool) {
+            $pool->setRecconectSleep($reconnectSleep);
+        }
+        
+        return $this;
+    }
 }

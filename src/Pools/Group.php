@@ -27,11 +27,7 @@ class Group
      */
     public function get(string $name): Pool
     {
-        if(!isset($this->pools[$name])) {
-            throw new Exception('Pool not found');
-        }
-
-        return $this->pools[$name];
+        return $this->pools[$name] ??  throw new Exception('Pool not found');
     }
 
     /**

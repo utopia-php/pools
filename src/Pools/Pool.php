@@ -14,7 +14,7 @@ class Pool
     /**
      * @var int
      */
-    protected $size = 0;
+    protected int $size = 0;
 
     /**
      * @var callable

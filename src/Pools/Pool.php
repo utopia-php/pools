@@ -43,6 +43,7 @@ class Pool
 
     /**
      * @var string $name
+     * @var int $size
      * @var callable $init
      */
     public function __construct(string $name, int $size, callable $init)
@@ -77,6 +78,7 @@ class Pool
     }
 
     /**
+     * @var int $reconnectAttempts
      * @return self
      */
     public function setReconnectAttempts(int $reconnectAttempts): self
@@ -94,6 +96,7 @@ class Pool
     }
 
     /**
+     * @var int $reconnectSleep
      * @return self
      */
     public function setReconnectSleep(int $reconnectSleep): self

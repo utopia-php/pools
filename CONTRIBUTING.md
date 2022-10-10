@@ -8,7 +8,7 @@ If you are worried or don’t know where to start, check out our next section ex
 
 ## Code of Conduct
 
-Help us keep the community open and inclusive. Please read and follow our [Code of Conduct](https://github.com/appwrite/appwrite/blob/master/CODE_OF_CONDUCT.md).
+Help us keep the community open and inclusive. Please read and follow our [Code of Conduct](https://github.com/utopia-php/pools/blob/main/CODE_OF_CONDUCT.md).
 
 ## Submit a Pull Request 🚀
 

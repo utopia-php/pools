@@ -1,6 +1,6 @@
 # Utopia Pools
 
-[![Build Status](https://travis-ci.org/utopia-php/abuse.svg?branch=master)](https://travis-ci.com/utopia-php/pools)
+[![Build Status](https://travis-ci.org/utopia-php/pools.svg?branch=main)](https://travis-ci.com/utopia-php/pools)
 ![Total Downloads](https://img.shields.io/packagist/dt/utopia-php/pools.svg)
 [![Discord](https://img.shields.io/discord/564160730845151244?label=discord)](https://appwrite.io/discord)
 

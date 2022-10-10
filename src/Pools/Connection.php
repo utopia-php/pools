@@ -25,6 +25,7 @@ class Connection {
     }
 
     /**
+     * @param string $id
      * @return self
      */
     public function setID(string $id): self

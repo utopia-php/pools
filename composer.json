@@ -1,0 +1,30 @@
+{
+    "name": "utopia-php/pools",
+    "description": "A simple library to manage connection pools",
+    "type": "library",
+    "keywords": ["php","framework", "utopia", "pools"],
+    "license": "MIT",
+    "minimum-stability": "stable",
+    "authors": [
+        {
+            "name": "Team Appwrite",
+            "email": "team@appwrite.io"
+        }
+    ],
+    "autoload": {
+        "psr-4": {"Utopia\\Pools\\": "src/Pools"}
+    },
+    "autoload-dev": {
+        "psr-4": {"Utopia\\Tests\\": "tests/Pools"}
+    },
+    "require": {
+        "php": ">=8.0",
+        "ext-pdo": "*",
+        "ext-redis": "*",
+        "ext-mongodb": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.4",
+        "vimeo/psalm": "4.0.1"
+    }
+}

@@ -13,15 +13,5 @@ services:
     ports:
       - "8708:8708"
 
-  mariadb:
-    image: mariadb:10.5
-    container_name: utopia-pools-mariadb
-    networks:
-      - database
-    ports:
-      - "8701:3306"
-    environment:
-      - MYSQL_ROOT_PASSWORD=password
-
 networks:
   database:

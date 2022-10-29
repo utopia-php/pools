@@ -128,7 +128,10 @@ class Pool
                 }
             } while ($attempts < $this->getReconnectAttempts());
 
-            $connection->setID($this->getName().'-'.$i);
+            $connection
+                ->setID($this->getName().'-'.$i)
+                ->setPool($this)
+            ;
             
             $this->pool[$i] = $connection;
         }
@@ -137,6 +140,14 @@ class Pool
     }
 
     /**
+     * Summary: 
+     *  1. Pool not at max size:
+     *      1.1 Available: Pop connection
+     *      1.2 Not Available: Create connection (x attempts or throw exception)
+     *  2. Pool is at max size: Wait (x seconds, y intervals)
+     *      2.1. Available: Return connection
+     *      2.1. Not Available: Throw exception
+     * 
      * @return Connection
      */
     public function pop(): Connection

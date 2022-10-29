@@ -4,6 +4,7 @@ namespace Utopia\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Utopia\Pools\Connection;
+use Utopia\Pools\Pool;
 
 class ConnectionTest extends TestCase
 {
@@ -49,5 +50,46 @@ class ConnectionTest extends TestCase
         $this->assertInstanceOf(Connection::class, $this->object->setResource('y'));
         
         $this->assertEquals('y', $this->object->getResource());
+    }
+
+    public function testSetPool()
+    {
+        $pool = new Pool('test', 1, function () {
+            return 'x';
+        });
+
+        $this->assertNull($this->object->getPool());
+        $this->assertInstanceOf(Connection::class, $this->object->setPool($pool));
+    }
+
+    public function testGetPool()
+    {
+        $pool = new Pool('test', 1, function () {
+            return 'x';
+        });
+
+        $this->assertNull($this->object->getPool());
+        $this->assertInstanceOf(Connection::class, $this->object->setPool($pool));
+        $this->assertInstanceOf(Pool::class, $this->object->getPool());
+        $this->assertEquals('test', $this->object->getPool()->getName());
+    }
+
+    public function testReclame()
+    {
+        $pool = new Pool('test', 1, function () {
+            return 'x';
+        });
+
+        $pool->fill();
+
+        $this->assertEquals(1, $pool->count());
+
+        $connection = $pool->pop();
+
+        $this->assertEquals(0, $pool->count());
+     
+        $this->assertInstanceOf(Pool::class, $connection->reclaim());
+     
+        $this->assertEquals(1, $pool->count());
     }
 }

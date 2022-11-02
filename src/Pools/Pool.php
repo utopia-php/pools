@@ -156,7 +156,7 @@ class Pool
             return $connection;
         }
 
-        throw new Exception('Failed to pop a connection from the pool');
+        throw new Exception('Failed to get a connection from the pool');
     }
 
     /**

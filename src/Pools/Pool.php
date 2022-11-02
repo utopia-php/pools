@@ -113,13 +113,6 @@ class Pool
      *  3. If still no connection is available, throw an exception
      *  4. If a connection is available, return it
      * 
-     *  1. Pool not at max size:
-     *      1.1 Available: Pop connection
-     *      1.2 Not Available: Create connection (x attempts or throw exception)
-     *  2. Pool is at max size: Wait (x seconds, y intervals)
-     *      2.1. Available: Return connection
-     *      2.1. Not Available: Throw exception
-     * 
      * @return Connection
      */
     public function pop(): Connection

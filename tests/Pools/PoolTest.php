@@ -63,16 +63,6 @@ class PoolTest extends TestCase
 
     public function testPop()
     {
-        // // Pool should be empty
-        // try {
-        //     $this->object->pop();
-        //     $this->fail('Exception not thrown');
-        // } catch (Exception $e) {
-        //     $this->assertInstanceOf(Exception::class, $e);
-        // }
-
-        // $this->object->fill();
-
         $this->assertEquals(5, $this->object->count());
 
         $connection = $this->object->pop();
@@ -81,6 +71,15 @@ class PoolTest extends TestCase
 
         $this->assertInstanceOf(Connection::class, $connection);
         $this->assertEquals('x', $connection->getResource());
+
+        // // Pool should be empty
+        $this->expectException(Exception::class);
+
+        $this->assertInstanceOf(Connection::class, $this->object->pop());
+        $this->assertInstanceOf(Connection::class, $this->object->pop());
+        $this->assertInstanceOf(Connection::class, $this->object->pop());
+        $this->assertInstanceOf(Connection::class, $this->object->pop());
+        $this->assertInstanceOf(Connection::class, $this->object->pop());
     }
 
     public function testPush()

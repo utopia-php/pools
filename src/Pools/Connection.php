@@ -10,6 +10,11 @@ class Connection {
     protected string $id = '';
 
     /**
+     * @var Pool
+     */
+    protected ?Pool $pool = null;
+
+    /**
      * @var mixed $resource
      */
     public function __construct(protected mixed $resource)
@@ -50,5 +55,31 @@ class Connection {
     {
         $this->resource = $resource;
         return $this;
+    }
+
+    /**
+     * @return Pool
+     */
+    public function getPool(): ?Pool
+    {
+        return $this->pool;
+    }
+
+    /**
+     * @param Pool $pool
+     * @return self
+     */
+    public function setPool(Pool &$pool): self
+    {
+        $this->pool = $pool;
+        return $this;
+    }
+
+    /**
+     * @return Pool
+     */
+    public function reclaim(): Pool
+    {
+        return $this->pool->reclaim($this);
     }
 }

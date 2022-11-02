@@ -46,8 +46,6 @@ $pool = new Pool('mysql-pool', 1 /* number of connections */, function() {
 $pool->setReconnectAttempts(3); // number of attempts to reconnect
 $pool->setReconnectSleep(5); // seconds to sleep between reconnect attempts
 
-$pool->fill(); // Populate the pool with connections
-
 $connection = $pool->pop(); // Get a connection from the pool
 $connection->getID(); // Get the connection ID
 $connection->getResource(); // Get the connection resource

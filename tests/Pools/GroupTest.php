@@ -59,34 +59,11 @@ class GroupTest extends TestCase
         $this->assertInstanceOf(Pool::class, $this->object->get('test'));
     }
 
-    public function testFill()
-    {
-        $this->object->add(new Pool('test', 1, function() {
-            return 'x';
-        }));
-
-        // Pool should be empty
-        try {
-            $this->object->get('test')->pop();
-            $this->fail('Exception not thrown');
-        } catch (Exception $e) {
-            $this->assertInstanceOf(Exception::class, $e);
-        }
-
-        $this->object->fill();
-
-        $this->assertInstanceOf(Connection::class, $this->object->get('test')->pop());
-    }
-
     public function testReset()
     {
         $this->object->add(new Pool('test', 5, function() {
             return 'x';
         }));
-
-        $this->assertEquals(0, $this->object->get('test')->count());
-
-        $this->object->fill();
 
         $this->assertEquals(5, $this->object->get('test')->count());
 

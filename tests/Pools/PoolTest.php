@@ -61,48 +61,17 @@ class PoolTest extends TestCase
         $this->assertEquals(20, $this->object->getReconnectSleep());
     }
 
-    public function testFill()
-    {
-        $this->assertEquals(0, $this->object->count());
-        
-        $this->object->fill();
-
-        $this->assertEquals(5, $this->object->count());
-    }
-
-    public function testFillFailure()
-    {
-        $this->object = new Pool('test', 5, function() {
-            throw new Exception();
-        });
-
-        $start = microtime(true);
-
-        $this->assertEquals(0, $this->object->count());
-        
-        try {
-            $this->object->fill();
-            $this->fail('Exception not thrown');
-        } catch (Exception $e) {
-            $this->assertInstanceOf(Exception::class, $e);
-        }
-    
-        $time = microtime(true) - $start;
-
-        $this->assertGreaterThan(2, $time);
-    }
-
     public function testPop()
     {
-        // Pool should be empty
-        try {
-            $this->object->pop();
-            $this->fail('Exception not thrown');
-        } catch (Exception $e) {
-            $this->assertInstanceOf(Exception::class, $e);
-        }
+        // // Pool should be empty
+        // try {
+        //     $this->object->pop();
+        //     $this->fail('Exception not thrown');
+        // } catch (Exception $e) {
+        //     $this->assertInstanceOf(Exception::class, $e);
+        // }
 
-        $this->object->fill();
+        // $this->object->fill();
 
         $this->assertEquals(5, $this->object->count());
 
@@ -116,16 +85,6 @@ class PoolTest extends TestCase
 
     public function testPush()
     {
-        // Pool should be empty
-        try {
-            $this->object->pop();
-            $this->fail('Exception not thrown');
-        } catch (Exception $e) {
-            $this->assertInstanceOf(Exception::class, $e);
-        }
-
-        $this->object->fill();
-
         $this->assertEquals(5, $this->object->count());
 
         $connection = $this->object->pop();
@@ -142,10 +101,6 @@ class PoolTest extends TestCase
 
     public function testCount()
     {
-        $this->assertEquals(0, $this->object->count());
-     
-        $this->object->fill();
-
         $this->assertEquals(5, $this->object->count());
 
         $connection = $this->object->pop();
@@ -157,12 +112,8 @@ class PoolTest extends TestCase
         $this->assertEquals(5, $this->object->count());
     }
 
-    public function testReset()
+    public function testReclaim()
     {
-        $this->assertEquals(0, $this->object->count());
-
-        $this->object->fill();
-
         $this->assertEquals(5, $this->object->count());
 
         $this->object->pop();
@@ -178,12 +129,6 @@ class PoolTest extends TestCase
 
     public function testIsEmpty()
     {
-        $this->assertEquals(true, $this->object->isEmpty());
-
-        $this->object->fill();
-
-        $this->assertEquals(false, $this->object->isEmpty());
-
         $this->object->pop();
         $this->object->pop();
         $this->object->pop();
@@ -195,10 +140,6 @@ class PoolTest extends TestCase
 
     public function testIsFull()
     {
-        $this->assertEquals(false, $this->object->isFull());
-
-        $this->object->fill();
-
         $this->assertEquals(true, $this->object->isFull());
 
         $connection = $this->object->pop();
@@ -228,9 +169,5 @@ class PoolTest extends TestCase
         $this->object->pop();
 
         $this->assertEquals(false, $this->object->isFull());
-
-        $this->object->fill();
-
-        $this->assertEquals(true, $this->object->isFull());
     }
 }

@@ -51,6 +51,7 @@ class Pool
         $this->name = $name;
         $this->size = $size;
         $this->init = $init;
+        $this->pool = array_fill(0, $size, true);
     }
 
     /**
@@ -106,13 +107,36 @@ class Pool
     }
 
     /**
-     * @return self
+     * Summary: 
+     *  1. Try to get a connection from the pool
+     *  2. If no connection is available, wait for one to be released
+     *  3. If still no connection is available, throw an exception
+     *  4. If a connection is available, return it
+     * 
+     *  1. Pool not at max size:
+     *      1.1 Available: Pop connection
+     *      1.2 Not Available: Create connection (x attempts or throw exception)
+     *  2. Pool is at max size: Wait (x seconds, y intervals)
+     *      2.1. Available: Return connection
+     *      2.1. Not Available: Throw exception
+     * 
+     * @return Connection
      */
-    public function fill(): self
+    public function pop(): Connection
     {
-        $this->pool = [];
+        $connection = array_pop($this->pool);
 
-        for ($i=0; $i < $this->size; $i++) { 
+        if(is_null($connection)) { // pool is empty, wait an if still empty throw exception
+            usleep(50000); // 50ms TODO: make this configurable
+
+            $connection = array_pop($this->pool);
+
+            if(is_null($connection)) {
+                throw new Exception('Pool is empty');
+            }
+        }
+
+        if($connection === true) { // Pool has space, create connection
             $attempts = 0;
 
             do {
@@ -129,37 +153,17 @@ class Pool
             } while ($attempts < $this->getReconnectAttempts());
 
             $connection
-                ->setID($this->getName().'-'.$i)
+                ->setID($this->getName().'-'.uniqid())
                 ->setPool($this)
             ;
-            
-            $this->pool[$i] = $connection;
+        }
+        
+        if($connection instanceof Connection) { // connection is available, return it
+            $this->active[$connection->getID()] = $connection;
+            return $connection;
         }
 
-        return $this;
-    }
-
-    /**
-     * Summary: 
-     *  1. Pool not at max size:
-     *      1.1 Available: Pop connection
-     *      1.2 Not Available: Create connection (x attempts or throw exception)
-     *  2. Pool is at max size: Wait (x seconds, y intervals)
-     *      2.1. Available: Return connection
-     *      2.1. Not Available: Throw exception
-     * 
-     * @return Connection
-     */
-    public function pop(): Connection
-    {
-        if (empty($this->pool)) {
-            throw new Exception('Pool is empty');
-        }
-
-        $connection = array_pop($this->pool);
-        $this->active[$connection->getID()] = $connection;
-
-        return $connection;
+        throw new Exception('Failed to pop a connection from the pool');
     }
 
     /**

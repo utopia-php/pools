@@ -80,8 +80,6 @@ class ConnectionTest extends TestCase
             return 'x';
         });
 
-        $pool->fill();
-
         $this->assertEquals(1, $pool->count());
 
         $connection = $pool->pop();

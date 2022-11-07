@@ -67,7 +67,7 @@ class PoolTest extends TestCase
         $this->assertInstanceOf(Connection::class, $connection);
         $this->assertEquals('x', $connection->getResource());
 
-        // // Pool should be empty
+        // Pool should be empty
         $this->expectException(Exception::class);
 
         $this->assertInstanceOf(Connection::class, $this->object->pop());

@@ -37,7 +37,7 @@ class Pool
     protected array $pool = [];
 
     /**
-     * @var array<Connection>
+     * @var array<string, Connection>
      */
     protected array $active = [];
 
@@ -147,13 +147,12 @@ class Pool
         }
 
         if ($connection instanceof Connection) { // connection is available, return it
-            $this->active[$connection->getID()] = $connection;
-
             $connection
                 ->setID($this->getName().'-'.uniqid())
                 ->setPool($this)
             ;
 
+            $this->active[$connection->getID()] = $connection;
             return $connection;
         }
 
@@ -186,11 +185,15 @@ class Pool
      */
     public function reclaim(Connection $connection = null): self
     {
-        foreach ($this->active as $activeConnection) {
-            if ($connection === null || $connection->getID() === $activeConnection->getID()) {
-                $this->push($activeConnection);
-            }
+        if ($connection !== null) {
+            $this->push($connection);
+            return $this;
         }
+
+        foreach ($this->active as $connection) {
+            $this->push($connection);
+        }
+
         return $this;
     }
 

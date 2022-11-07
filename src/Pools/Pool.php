@@ -10,7 +10,7 @@ class Pool
      * @var string
      */
     protected string $name;
-    
+
     /**
      * @var int
      */
@@ -32,19 +32,19 @@ class Pool
     protected int $reconnectSleep = 1; // seconds
 
     /**
-     * @var array
+     * @var array<Connection|true>
      */
     protected array $pool = [];
 
     /**
-     * @var array
+     * @var array<string, Connection>
      */
     protected array $active = [];
 
     /**
-     * @var string $name
-     * @var int $size
-     * @var callable $init
+     * @param string $name
+     * @param int $size
+     * @param callable $init
      */
     public function __construct(string $name, int $size, callable $init)
     {
@@ -79,7 +79,7 @@ class Pool
     }
 
     /**
-     * @var int $reconnectAttempts
+     * @param int $reconnectAttempts
      * @return self
      */
     public function setReconnectAttempts(int $reconnectAttempts): self
@@ -97,7 +97,7 @@ class Pool
     }
 
     /**
-     * @var int $reconnectSleep
+     * @param int $reconnectSleep
      * @return self
      */
     public function setReconnectSleep(int $reconnectSleep): self
@@ -107,29 +107,29 @@ class Pool
     }
 
     /**
-     * Summary: 
+     * Summary:
      *  1. Try to get a connection from the pool
      *  2. If no connection is available, wait for one to be released
      *  3. If still no connection is available, throw an exception
      *  4. If a connection is available, return it
-     * 
+     *
      * @return Connection
      */
     public function pop(): Connection
     {
         $connection = array_pop($this->pool);
 
-        if(is_null($connection)) { // pool is empty, wait an if still empty throw exception
+        if (is_null($connection)) { // pool is empty, wait an if still empty throw exception
             usleep(50000); // 50ms TODO: make this configurable
 
             $connection = array_pop($this->pool);
 
-            if(is_null($connection)) {
+            if (is_null($connection)) {
                 throw new Exception('Pool is empty');
             }
         }
 
-        if($connection === true) { // Pool has space, create connection
+        if ($connection === true) { // Pool has space, create connection
             $attempts = 0;
 
             do {
@@ -144,14 +144,14 @@ class Pool
                     sleep($this->getReconnectSleep());
                 }
             } while ($attempts < $this->getReconnectAttempts());
+        }
 
+        if ($connection instanceof Connection) { // connection is available, return it
             $connection
                 ->setID($this->getName().'-'.uniqid())
                 ->setPool($this)
             ;
-        }
-        
-        if($connection instanceof Connection) { // connection is available, return it
+
             $this->active[$connection->getID()] = $connection;
             return $connection;
         }
@@ -180,16 +180,23 @@ class Pool
     }
 
     /**
+     * @param Connection|null $connection
      * @return self
      */
-    public function reclaim(): self
+    public function reclaim(Connection $connection = null): self
     {
+        if ($connection !== null) {
+            $this->push($connection);
+            return $this;
+        }
+
         foreach ($this->active as $connection) {
             $this->push($connection);
         }
+
         return $this;
     }
-    
+
     /**
      * @return bool
      */

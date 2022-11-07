@@ -32,7 +32,7 @@ class Pool
     protected int $reconnectSleep = 1; // seconds
 
     /**
-     * @var array<int, true>|array<Connection>
+     * @var array<Connection|true>
      */
     protected array $pool = [];
 

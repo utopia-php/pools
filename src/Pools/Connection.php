@@ -82,10 +82,10 @@ class Connection
      */
     public function reclaim(): Pool
     {
-        if($this->pool === null) {
+        if ($this->pool === null) {
             throw new Exception('You cannot reclaim connection that does not have a pool.');
         }
-        
+
         return $this->pool->reclaim($this);
     }
 }

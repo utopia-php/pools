@@ -69,7 +69,7 @@ class ConnectionTest extends TestCase
 
         $pool = $this->object->getPool();
 
-        if($pool === null) {
+        if ($pool === null) {
             throw new Exception("Pool should never be null here.");
         }
 
@@ -102,7 +102,8 @@ class ConnectionTest extends TestCase
         $this->assertEquals(2, $pool->count());
     }
 
-    public function testReclaimException(): void {
+    public function testReclaimException(): void
+    {
         $this->expectException(Exception::class);
         $this->object->reclaim();
     }

@@ -187,7 +187,7 @@ class Pool
     public function reclaim(Connection $connection = null): self
     {
         foreach ($this->active as $activeConnection) {
-            if($connection === null || $connection->getID() === $activeConnection->getID()) {
+            if ($connection === null || $connection->getID() === $activeConnection->getID()) {
                 $this->push($activeConnection);
             }
         }

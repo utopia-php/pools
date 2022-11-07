@@ -23,18 +23,18 @@ class ConnectionTest extends TestCase
     public function testGetID()
     {
         $this->assertEquals(null, $this->object->getID());
-        
+
         $this->object->setID('test');
-        
+
         $this->assertEquals('test', $this->object->getID());
     }
 
     public function testSetID()
     {
         $this->assertEquals(null, $this->object->getID());
-        
+
         $this->assertInstanceOf(Connection::class, $this->object->setID('test'));
-        
+
         $this->assertEquals('test', $this->object->getID());
     }
 
@@ -46,9 +46,9 @@ class ConnectionTest extends TestCase
     public function testSetResource()
     {
         $this->assertEquals('x', $this->object->getResource());
-        
+
         $this->assertInstanceOf(Connection::class, $this->object->setResource('y'));
-        
+
         $this->assertEquals('y', $this->object->getResource());
     }
 
@@ -85,9 +85,9 @@ class ConnectionTest extends TestCase
         $connection = $pool->pop();
 
         $this->assertEquals(0, $pool->count());
-     
+
         $this->assertInstanceOf(Pool::class, $connection->reclaim());
-     
+
         $this->assertEquals(1, $pool->count());
     }
 }

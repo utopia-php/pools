@@ -10,7 +10,7 @@ class Group
      * @var Pool[]
      */
     protected array $pools = [];
-    
+
     /**
      * @var Pool $pool
      * @return self
@@ -20,7 +20,7 @@ class Group
         $this->pools[$pool->getName()] = $pool;
         return $this;
     }
-    
+
     /**
      * @var string $name
      * @return Pool
@@ -48,7 +48,7 @@ class Group
         foreach ($this->pools as $pool) {
             $pool->reclaim();
         }
-        
+
         return $this;
     }
 
@@ -61,7 +61,7 @@ class Group
         foreach ($this->pools as $pool) {
             $pool->setReconnectAttempts($reconnectAttempts);
         }
-        
+
         return $this;
     }
 
@@ -74,7 +74,7 @@ class Group
         foreach ($this->pools as $pool) {
             $pool->setReconnectSleep($reconnectSleep);
         }
-        
+
         return $this;
     }
 }

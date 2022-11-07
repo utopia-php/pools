@@ -10,7 +10,7 @@ class Pool
      * @var string
      */
     protected string $name;
-    
+
     /**
      * @var int
      */
@@ -107,29 +107,29 @@ class Pool
     }
 
     /**
-     * Summary: 
+     * Summary:
      *  1. Try to get a connection from the pool
      *  2. If no connection is available, wait for one to be released
      *  3. If still no connection is available, throw an exception
      *  4. If a connection is available, return it
-     * 
+     *
      * @return Connection
      */
     public function pop(): Connection
     {
         $connection = array_pop($this->pool);
 
-        if(is_null($connection)) { // pool is empty, wait an if still empty throw exception
+        if (is_null($connection)) { // pool is empty, wait an if still empty throw exception
             usleep(50000); // 50ms TODO: make this configurable
 
             $connection = array_pop($this->pool);
 
-            if(is_null($connection)) {
+            if (is_null($connection)) {
                 throw new Exception('Pool is empty');
             }
         }
 
-        if($connection === true) { // Pool has space, create connection
+        if ($connection === true) { // Pool has space, create connection
             $attempts = 0;
 
             do {
@@ -150,8 +150,8 @@ class Pool
                 ->setPool($this)
             ;
         }
-        
-        if($connection instanceof Connection) { // connection is available, return it
+
+        if ($connection instanceof Connection) { // connection is available, return it
             $this->active[$connection->getID()] = $connection;
             return $connection;
         }
@@ -189,7 +189,7 @@ class Pool
         }
         return $this;
     }
-    
+
     /**
      * @return bool
      */

@@ -2,8 +2,8 @@
 
 namespace Utopia\Pools;
 
-class Connection {
-
+class Connection
+{
     /**
      * @var string
      */
@@ -20,7 +20,7 @@ class Connection {
     public function __construct(protected mixed $resource)
     {
     }
-    
+
     /**
      * @return string
      */

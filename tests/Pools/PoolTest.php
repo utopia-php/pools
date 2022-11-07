@@ -13,7 +13,7 @@ class PoolTest extends TestCase
 
     public function setUp(): void
     {
-        $this->object = new Pool('test', 5, function() {
+        $this->object = new Pool('test', 5, function () {
             return 'x';
         });
     }
@@ -41,7 +41,7 @@ class PoolTest extends TestCase
     public function testSetReconnectAttempts()
     {
         $this->assertEquals(3, $this->object->getReconnectAttempts());
-        
+
         $this->object->setReconnectAttempts(20);
 
         $this->assertEquals(20, $this->object->getReconnectAttempts());
@@ -55,7 +55,7 @@ class PoolTest extends TestCase
     public function testSetReconnectSleep()
     {
         $this->assertEquals(1, $this->object->getReconnectSleep());
-        
+
         $this->object->setReconnectSleep(20);
 
         $this->assertEquals(20, $this->object->getReconnectSleep());

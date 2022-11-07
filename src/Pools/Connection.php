@@ -2,6 +2,8 @@
 
 namespace Utopia\Pools;
 
+use Exception;
+
 class Connection
 {
     /**
@@ -10,12 +12,12 @@ class Connection
     protected string $id = '';
 
     /**
-     * @var Pool
+     * @var Pool|null
      */
     protected ?Pool $pool = null;
 
     /**
-     * @var mixed $resource
+     * @param mixed $resource
      */
     public function __construct(protected mixed $resource)
     {
@@ -80,6 +82,10 @@ class Connection
      */
     public function reclaim(): Pool
     {
+        if($this->pool === null) {
+            throw new Exception('You cannot reclaim connection that does not have a pool.');
+        }
+        
         return $this->pool->reclaim($this);
     }
 }

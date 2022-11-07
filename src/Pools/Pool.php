@@ -32,19 +32,19 @@ class Pool
     protected int $reconnectSleep = 1; // seconds
 
     /**
-     * @var array
+     * @var array<int, true>|array<Connection>
      */
     protected array $pool = [];
 
     /**
-     * @var array
+     * @var array<Connection>
      */
     protected array $active = [];
 
     /**
-     * @var string $name
-     * @var int $size
-     * @var callable $init
+     * @param string $name
+     * @param int $size
+     * @param callable $init
      */
     public function __construct(string $name, int $size, callable $init)
     {
@@ -79,7 +79,7 @@ class Pool
     }
 
     /**
-     * @var int $reconnectAttempts
+     * @param int $reconnectAttempts
      * @return self
      */
     public function setReconnectAttempts(int $reconnectAttempts): self
@@ -97,7 +97,7 @@ class Pool
     }
 
     /**
-     * @var int $reconnectSleep
+     * @param int $reconnectSleep
      * @return self
      */
     public function setReconnectSleep(int $reconnectSleep): self
@@ -144,15 +144,16 @@ class Pool
                     sleep($this->getReconnectSleep());
                 }
             } while ($attempts < $this->getReconnectAttempts());
+        }
+
+        if ($connection instanceof Connection) { // connection is available, return it
+            $this->active[$connection->getID()] = $connection;
 
             $connection
                 ->setID($this->getName().'-'.uniqid())
                 ->setPool($this)
             ;
-        }
 
-        if ($connection instanceof Connection) { // connection is available, return it
-            $this->active[$connection->getID()] = $connection;
             return $connection;
         }
 
@@ -180,12 +181,15 @@ class Pool
     }
 
     /**
+     * @param Connection|null $connection
      * @return self
      */
-    public function reclaim(): self
+    public function reclaim(Connection $connection = null): self
     {
-        foreach ($this->active as $connection) {
-            $this->push($connection);
+        foreach ($this->active as $activeConnection) {
+            if($connection === null || $connection->getID() === $activeConnection->getID()) {
+                $this->push($activeConnection);
+            }
         }
         return $this;
     }

@@ -12,7 +12,7 @@ class Group
     protected array $pools = [];
 
     /**
-     * @var Pool $pool
+     * @param Pool $pool
      * @return self
      */
     public function add(Pool $pool): self
@@ -22,7 +22,7 @@ class Group
     }
 
     /**
-     * @var string $name
+     * @param string $name
      * @return Pool
      */
     public function get(string $name): Pool
@@ -31,7 +31,7 @@ class Group
     }
 
     /**
-     * @var string $name
+     * @param string $name
      * @return self
      */
     public function remove(string $name): self
@@ -53,7 +53,7 @@ class Group
     }
 
     /**
-     * @var int $reconnectAttempts
+     * @param int $reconnectAttempts
      * @return self
      */
     public function setReconnectAttempts(int $reconnectAttempts): self
@@ -66,7 +66,7 @@ class Group
     }
 
     /**
-     * @var int $reconnectAttempts
+     * @param int $reconnectSleep
      * @return self
      */
     public function setReconnectSleep(int $reconnectSleep): self

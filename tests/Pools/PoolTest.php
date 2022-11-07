@@ -9,7 +9,7 @@ use Utopia\Pools\Pool;
 
 class PoolTest extends TestCase
 {
-    protected ?Pool $object;
+    protected Pool $object;
 
     public function setUp(): void
     {
@@ -18,27 +18,22 @@ class PoolTest extends TestCase
         });
     }
 
-    public function tearDown(): void
-    {
-        $this->object = null;
-    }
-
-    public function testGetName()
+    public function testGetName(): void
     {
         $this->assertEquals('test', $this->object->getName());
     }
 
-    public function testGetSize()
+    public function testGetSize(): void
     {
         $this->assertEquals(5, $this->object->getSize());
     }
 
-    public function testGetReconnectAttempts()
+    public function testGetReconnectAttempts(): void
     {
         $this->assertEquals(3, $this->object->getReconnectAttempts());
     }
 
-    public function testSetReconnectAttempts()
+    public function testSetReconnectAttempts(): void
     {
         $this->assertEquals(3, $this->object->getReconnectAttempts());
 
@@ -47,12 +42,12 @@ class PoolTest extends TestCase
         $this->assertEquals(20, $this->object->getReconnectAttempts());
     }
 
-    public function testGetReconnectSleep()
+    public function testGetReconnectSleep(): void
     {
         $this->assertEquals(1, $this->object->getReconnectSleep());
     }
 
-    public function testSetReconnectSleep()
+    public function testSetReconnectSleep(): void
     {
         $this->assertEquals(1, $this->object->getReconnectSleep());
 
@@ -61,7 +56,7 @@ class PoolTest extends TestCase
         $this->assertEquals(20, $this->object->getReconnectSleep());
     }
 
-    public function testPop()
+    public function testPop(): void
     {
         $this->assertEquals(5, $this->object->count());
 
@@ -82,7 +77,7 @@ class PoolTest extends TestCase
         $this->assertInstanceOf(Connection::class, $this->object->pop());
     }
 
-    public function testPush()
+    public function testPush(): void
     {
         $this->assertEquals(5, $this->object->count());
 
@@ -98,7 +93,7 @@ class PoolTest extends TestCase
         $this->assertEquals(5, $this->object->count());
     }
 
-    public function testCount()
+    public function testCount(): void
     {
         $this->assertEquals(5, $this->object->count());
 
@@ -111,7 +106,7 @@ class PoolTest extends TestCase
         $this->assertEquals(5, $this->object->count());
     }
 
-    public function testReclaim()
+    public function testReclaim(): void
     {
         $this->assertEquals(5, $this->object->count());
 
@@ -126,7 +121,7 @@ class PoolTest extends TestCase
         $this->assertEquals(5, $this->object->count());
     }
 
-    public function testIsEmpty()
+    public function testIsEmpty(): void
     {
         $this->object->pop();
         $this->object->pop();
@@ -137,7 +132,7 @@ class PoolTest extends TestCase
         $this->assertEquals(true, $this->object->isEmpty());
     }
 
-    public function testIsFull()
+    public function testIsFull(): void
     {
         $this->assertEquals(true, $this->object->isFull());
 

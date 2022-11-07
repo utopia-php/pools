@@ -12,6 +12,7 @@ jobs:
 
     - name: Start Test Stack
       run: |
+        export COMPOSE_INTERACTIVE_NO_CLI
         export DOCKER_BUILDKIT=1
         export COMPOSE_DOCKER_CLI_BUILD=1
         export BUILDKIT_PROGRESS=plain
@@ -23,4 +24,4 @@ jobs:
       run: |
         docker ps
     - name: Run Tests
-      run: docker-compose exec tests vendor/bin/phpunit --configuration phpunit.xml
+      run: docker compose exec tests vendor/bin/phpunit --configuration phpunit.xml

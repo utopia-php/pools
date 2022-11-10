@@ -56,6 +56,34 @@ class PoolTest extends TestCase
         $this->assertEquals(20, $this->object->getReconnectSleep());
     }
 
+    public function testGetRetryAttempts(): void
+    {
+        $this->assertEquals(3, $this->object->getRetryAttempts());
+    }
+
+    public function testSetRetryAttempts(): void
+    {
+        $this->assertEquals(3, $this->object->getRetryAttempts());
+
+        $this->object->setRetryAttempts(20);
+
+        $this->assertEquals(20, $this->object->getRetryAttempts());
+    }
+
+    public function testGetRetrySleep(): void
+    {
+        $this->assertEquals(1, $this->object->getRetrySleep());
+    }
+
+    public function testSetRetrySleep(): void
+    {
+        $this->assertEquals(1, $this->object->getRetrySleep());
+
+        $this->object->setRetrySleep(20);
+
+        $this->assertEquals(20, $this->object->getRetrySleep());
+    }
+
     public function testPop(): void
     {
         $this->assertEquals(5, $this->object->count());
@@ -163,5 +191,28 @@ class PoolTest extends TestCase
         $this->object->pop();
 
         $this->assertEquals(false, $this->object->isFull());
+    }
+
+    public function testRetry(): void
+    {
+        $this->object->setReconnectAttempts(2);
+        $this->object->setReconnectSleep(2);
+
+        $this->object->pop();
+        $this->object->pop();
+        $this->object->pop();
+        $this->object->pop();
+        $this->object->pop();
+
+        // Pool should be empty
+        $this->expectException(Exception::class);
+
+        $timeStart = \time();
+        $this->object->pop();
+        $timeEnd = \time();
+
+        $timeDiff = $timeEnd - $timeStart;
+
+        $this->assertGreaterThanOrEqual(4, $timeDiff);
     }
 }

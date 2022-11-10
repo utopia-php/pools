@@ -46,6 +46,9 @@ $pool = new Pool('mysql-pool', 1 /* number of connections */, function() {
 $pool->setReconnectAttempts(3); // number of attempts to reconnect
 $pool->setReconnectSleep(5); // seconds to sleep between reconnect attempts
 
+$pool->setRetryAttempts(3); // number of attempts to get connection
+$pool->setRetrySleep(5); // seconds to sleep between failed pop-connection attempts
+
 $connection = $pool->pop(); // Get a connection from the pool
 $connection->getID(); // Get the connection ID
 $connection->getResource(); // Get the connection resource
@@ -66,6 +69,17 @@ $group->get('mysql-pool'); // Get a pool from the group
 $group->setReconnectAttempts(3); // Set the number of reconnect attempts for all pools
 $group->setReconnectSleep(5); // Set the sleep time between reconnect attempts for all pools
 ```
+
+## Reconnect and Retry
+
+Both reconnect and retry logic is used in `pop()` method to handle problematic scenarios. Both allow you to configure 2 properties:
+
+- `attempts` - How many times library will retry when problem occurs
+- `sleep` - How long will library wait for before next retry attempt
+
+**Reconnect** settings are used when your connection initialization callback throws an exception. This can occur for example, when a handshake with SQL server fails.
+
+**Retry** settings are used when pool of connection is empty and there is no more connections to pop. This can occur for example, when your server supports more concurrent actions than your pool.
 
 ## System Requirements
 

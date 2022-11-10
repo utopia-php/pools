@@ -32,6 +32,16 @@ class Pool
     protected int $reconnectSleep = 1; // seconds
 
     /**
+     * @var int
+     */
+    protected int $retryAttempts = 3;
+
+    /**
+     * @var int
+     */
+    protected int $retrySleep = 1; // seconds
+
+    /**
      * @var array<Connection|true>
      */
     protected array $pool = [];
@@ -107,6 +117,42 @@ class Pool
     }
 
     /**
+     * @return int
+     */
+    public function getRetryAttempts(): int
+    {
+        return $this->retryAttempts;
+    }
+
+    /**
+     * @param int $retryAttempts
+     * @return self
+     */
+    public function setRetryAttempts(int $retryAttempts): self
+    {
+        $this->retryAttempts = $retryAttempts;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getRetrySleep(): int
+    {
+        return $this->retrySleep;
+    }
+
+    /**
+     * @param int $retrySleep
+     * @return self
+     */
+    public function setRetrySleep(int $retrySleep): self
+    {
+        $this->retrySleep = $retrySleep;
+        return $this;
+    }
+
+    /**
      * Summary:
      *  1. Try to get a connection from the pool
      *  2. If no connection is available, wait for one to be released
@@ -117,17 +163,22 @@ class Pool
      */
     public function pop(): Connection
     {
-        $connection = array_pop($this->pool);
+        $attempts = 0;
 
-        if (is_null($connection)) { // pool is empty, wait an if still empty throw exception
-            usleep(50000); // 50ms TODO: make this configurable
-
+        do {
+            $attempts++;
             $connection = array_pop($this->pool);
 
             if (is_null($connection)) {
-                throw new Exception('Pool is empty');
+                if ($attempts >= $this->getRetryAttempts()) {
+                    throw new Exception('Pool is empty');
+                }
+
+                sleep($this->getRetrySleep());
+            } else {
+                break;
             }
-        }
+        } while ($attempts < $this->getRetryAttempts());
 
         if ($connection === true) { // Pool has space, create connection
             $attempts = 0;

@@ -28,7 +28,6 @@
         "ext-pdo": "*",
         "ext-redis": "*",
         "ext-mongodb": "*",
-        "utopia-php/cli": "^0.14.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.3",

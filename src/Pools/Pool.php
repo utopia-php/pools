@@ -171,7 +171,7 @@ class Pool
 
             if (is_null($connection)) {
                 if ($attempts >= $this->getRetryAttempts()) {
-                    throw new Exception('Pool is empty');
+                    throw new Exception("Pool '{$this->name}' is empty (size {$this->size})");
                 }
 
                 sleep($this->getRetrySleep());

@@ -222,6 +222,35 @@ class Pool
         return $this;
     }
 
+    public function fill(): self
+    {
+
+        for ($i=0; $i < $this->size; $i++) { 
+            $connection = $this->pool[$i];
+            
+            if ($connection === true) { // Pool has space, create connection
+                $attempts = 0;
+    
+                do {
+                    try {
+                        $attempts++;
+                        $connection = new Connection(($this->init)());
+                        $this->pool[$i] = $connection;
+                        break; // leave loop if successful
+                    } catch (\Exception $e) {
+                        if ($attempts >= $this->getReconnectAttempts()) {
+                            throw new \Exception('Failed to create connection: ' . $e->getMessage());
+                        }
+                        sleep($this->getReconnectSleep());
+                    }
+                } while ($attempts < $this->getReconnectAttempts());
+            }
+        }
+        
+        return $this;
+        
+    }
+
     /**
      * @return int
      */

@@ -248,6 +248,27 @@ class Pool
         return $this;
     }
 
+
+    /**
+     * @param Connection|null $connection
+     * @return self
+     */
+    public function destroy(Connection $connection = null): self
+    {
+        if ($connection !== null) {
+            array_push($this->pool, true);
+            unset($this->active[$connection->getID()]);
+            return $this;
+        }
+
+        foreach ($this->active as $connection) {
+            array_push($this->pool, true);
+            unset($this->active[$connection->getID()]);
+        }
+
+        return $this;
+    }
+
     /**
      * @return bool
      */

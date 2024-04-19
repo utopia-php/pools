@@ -215,4 +215,35 @@ class PoolTest extends TestCase
 
         $this->assertGreaterThanOrEqual(4, $timeDiff);
     }
+
+    public function testDestroy(): void
+    {
+        $i = 0;
+        $object = new Pool('testDestroy', 2, function () use (&$i) {
+            $i++;
+            return $i <= 2 ? 'x' : 'y';
+        });
+
+        $this->assertEquals(2, $object->count());
+
+        $connection1 = $object->pop();
+        $connection2 = $object->pop();
+
+        $this->assertEquals(0, $object->count());
+
+        $this->assertEquals('x', $connection1->getResource());
+        $this->assertEquals('x', $connection2->getResource());
+
+        $object->destroy();
+
+        $this->assertEquals(2, $object->count());
+
+        $connection1 = $object->pop();
+        $connection2 = $object->pop();
+
+        $this->assertEquals(0, $object->count());
+
+        $this->assertEquals('y', $connection1->getResource());
+        $this->assertEquals('y', $connection2->getResource());
+    }
 }

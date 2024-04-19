@@ -88,4 +88,16 @@ class Connection
 
         return $this->pool->reclaim($this);
     }
+
+    /**
+     * @return Pool
+     */
+    public function destroy(): Pool
+    {
+        if ($this->pool === null) {
+            throw new Exception('You cannot destroy connection that does not have a pool.');
+        }
+
+        return $this->pool->destroy($this);
+    }
 }

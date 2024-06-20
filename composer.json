@@ -21,7 +21,8 @@
         "lint": "./vendor/bin/pint --preset psr12 --test",
         "format": "./vendor/bin/pint --preset psr12",
         "check": "./vendor/bin/phpstan analyse --level max src tests",
-        "test": "./vendor/bin/phpunit --configuration phpunit.xml --debug"
+        "test": "./vendor/bin/phpunit --configuration phpunit.xml --debug",
+        "bench": "vendor/bin/phpbench run --report=benchmark"
     },
     "require": {
         "php": ">=8.0"
@@ -29,7 +30,8 @@
     "require-dev": {
         "phpunit/phpunit": "^9.3",
         "laravel/pint": "1.2.*",
-        "phpstan/phpstan": "1.8.*"
+        "phpstan/phpstan": "1.8.*",
+        "phpbench/phpbench": "^1.2"
     },
     "suggests": {
         "ext-mongodb": "Needed to support MongoDB database pools",

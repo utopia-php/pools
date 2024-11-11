@@ -7,12 +7,12 @@ use Exception;
 class Group
 {
     /**
-     * @var Pool[]
+     * @var array<Pool<mixed>>
      */
     protected array $pools = [];
 
     /**
-     * @param Pool $pool
+     * @param Pool<mixed> $pool
      * @return self
      */
     public function add(Pool $pool): self
@@ -23,7 +23,8 @@ class Group
 
     /**
      * @param string $name
-     * @return Pool
+     * @return Pool<mixed>
+     * @throws Exception
      */
     public function get(string $name): Pool
     {

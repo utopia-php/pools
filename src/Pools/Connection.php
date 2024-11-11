@@ -4,6 +4,9 @@ namespace Utopia\Pools;
 
 use Exception;
 
+/**
+ * @template T
+ */
 class Connection
 {
     /**
@@ -12,15 +15,24 @@ class Connection
     protected string $id = '';
 
     /**
-     * @var Pool|null
+     * @var Pool<T>|null
      */
     protected ?Pool $pool = null;
 
     /**
-     * @param mixed $resource
+     * @var callable(T): void | null
      */
-    public function __construct(protected mixed $resource)
-    {
+    protected $reset;
+
+    /**
+     * @param T $resource
+     * @param callable(T): void | null $reset
+     */
+    public function __construct(
+        protected mixed $resource,
+        ?callable $reset = null
+    ) {
+        $this->reset = $reset;
     }
 
     /**
@@ -33,7 +45,7 @@ class Connection
 
     /**
      * @param string $id
-     * @return self
+     * @return self<T>
      */
     public function setID(string $id): self
     {
@@ -42,7 +54,7 @@ class Connection
     }
 
     /**
-     * @return mixed
+     * @return T
      */
     public function getResource(): mixed
     {
@@ -50,8 +62,8 @@ class Connection
     }
 
     /**
-     * @param mixed $resource
-     * @return self
+     * @param T $resource
+     * @return self<T>
      */
     public function setResource(mixed $resource): self
     {
@@ -60,7 +72,7 @@ class Connection
     }
 
     /**
-     * @return Pool
+     * @return ?Pool<T>
      */
     public function getPool(): ?Pool
     {
@@ -68,17 +80,18 @@ class Connection
     }
 
     /**
-     * @param Pool $pool
-     * @return self
+     * @param Pool<T> $pool
+     * @return self<T>
      */
-    public function setPool(Pool &$pool): self
+    public function setPool(Pool $pool): self
     {
         $this->pool = $pool;
         return $this;
     }
 
     /**
-     * @return Pool
+     * @return Pool<T>
+     * @throws Exception
      */
     public function reclaim(): Pool
     {
@@ -90,7 +103,8 @@ class Connection
     }
 
     /**
-     * @return Pool
+     * @return Pool<T>
+     * @throws Exception
      */
     public function destroy(): Pool
     {
@@ -99,5 +113,15 @@ class Connection
         }
 
         return $this->pool->destroy($this);
+    }
+
+    public function reset(): void
+    {
+        \var_dump('calling reset on connection: ' . $this->id);
+        if ($this->reset === null) {
+            return;
+        }
+
+        ($this->reset)($this->resource);
     }
 }

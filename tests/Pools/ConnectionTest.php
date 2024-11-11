@@ -9,6 +9,9 @@ use Utopia\Pools\Pool;
 
 class ConnectionTest extends TestCase
 {
+    /**
+     * @var Connection<string>
+     */
     protected Connection $object;
 
     public function setUp(): void

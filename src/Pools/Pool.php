@@ -4,6 +4,9 @@ namespace Utopia\Pools;
 
 use Exception;
 
+/**
+ * @template T
+ */
 class Pool
 {
     /**
@@ -17,9 +20,14 @@ class Pool
     protected int $size = 0;
 
     /**
-     * @var callable
+     * @var callable(): T
      */
-    protected $init = null;
+    protected $init;
+
+    /**
+     * @var callable(T): void | null
+     */
+    protected $reset = null;
 
     /**
      * @var int
@@ -42,25 +50,31 @@ class Pool
     protected int $retrySleep = 1; // seconds
 
     /**
-     * @var array<Connection|true>
+     * @var array<Connection<T>|true>
      */
     protected array $pool = [];
 
     /**
-     * @var array<string, Connection>
+     * @var array<string, Connection<T>>
      */
     protected array $active = [];
 
     /**
      * @param string $name
      * @param int $size
-     * @param callable $init
+     * @param callable(): T $init
+     * @param callable(T): void | null $reset
      */
-    public function __construct(string $name, int $size, callable $init)
-    {
+    public function __construct(
+        string $name,
+        int $size,
+        callable $init,
+        ?callable $reset = null
+    ) {
         $this->name = $name;
         $this->size = $size;
         $this->init = $init;
+        $this->reset = $reset;
         $this->pool = array_fill(0, $size, true);
     }
 
@@ -90,7 +104,7 @@ class Pool
 
     /**
      * @param int $reconnectAttempts
-     * @return self
+     * @return self<T>
      */
     public function setReconnectAttempts(int $reconnectAttempts): self
     {
@@ -108,7 +122,7 @@ class Pool
 
     /**
      * @param int $reconnectSleep
-     * @return self
+     * @return self<T>
      */
     public function setReconnectSleep(int $reconnectSleep): self
     {
@@ -126,7 +140,7 @@ class Pool
 
     /**
      * @param int $retryAttempts
-     * @return self
+     * @return self<T>
      */
     public function setRetryAttempts(int $retryAttempts): self
     {
@@ -144,7 +158,7 @@ class Pool
 
     /**
      * @param int $retrySleep
-     * @return self
+     * @return self<T>
      */
     public function setRetrySleep(int $retrySleep): self
     {
@@ -159,7 +173,7 @@ class Pool
      *  3. If still no connection is available, throw an exception
      *  4. If a connection is available, return it
      *
-     * @return Connection
+     * @return Connection<T>
      */
     public function pop(): Connection
     {
@@ -186,7 +200,7 @@ class Pool
             do {
                 try {
                     $attempts++;
-                    $connection = new Connection(($this->init)());
+                    $connection = new Connection(($this->init)(), $this->reset);
                     break; // leave loop if successful
                 } catch (\Exception $e) {
                     if ($attempts >= $this->getReconnectAttempts()) {
@@ -204,6 +218,9 @@ class Pool
             ;
 
             $this->active[$connection->getID()] = $connection;
+
+            $connection->reset();
+
             return $connection;
         }
 
@@ -211,12 +228,12 @@ class Pool
     }
 
     /**
-     * @param Connection $connection
-     * @return self
+     * @param Connection<T> $connection
+     * @return self<T>
      */
     public function push(Connection $connection): self
     {
-        array_push($this->pool, $connection);
+        $this->pool[] = $connection;
         unset($this->active[$connection->getID()]);
 
         return $this;
@@ -231,8 +248,8 @@ class Pool
     }
 
     /**
-     * @param Connection|null $connection
-     * @return self
+     * @param ?Connection<T> $connection
+     * @return self<T>
      */
     public function reclaim(Connection $connection = null): self
     {
@@ -250,8 +267,8 @@ class Pool
 
 
     /**
-     * @param Connection|null $connection
-     * @return self
+     * @param ?Connection<T> $connection
+     * @return self<T>
      */
     public function destroy(Connection $connection = null): self
     {

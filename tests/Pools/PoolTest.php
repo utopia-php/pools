@@ -246,4 +246,29 @@ class PoolTest extends TestCase
         $this->assertEquals('y', $connection1->getResource());
         $this->assertEquals('y', $connection2->getResource());
     }
+
+    public function testReset(): void
+    {
+        $resource = function () {
+            return new \ArrayObject([
+                'initialized' => true
+            ]);
+        };
+
+        $object = new Pool('testReset', 2, function () use ($resource) {
+            return $resource();
+        }, function ($resource) {
+            $resource['initialized'] = false;
+        });
+
+        $this->assertEquals(2, $object->count());
+
+        $connection1 = $object->pop();
+        $connection2 = $object->pop();
+
+        $this->assertEquals(0, $object->count());
+
+        $this->assertEquals(false, $connection1->getResource()['initialized']);
+        $this->assertEquals(false, $connection2->getResource()['initialized']);
+    }
 }

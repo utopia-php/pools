@@ -1,17 +1,19 @@
-version: '3.1'
-
 services:
 
   tests:
     container_name: utopia-pools-tests
     build:
       context: .
+      args:
+        DEBUG: true
     networks:
-      - database
+      - pools
     volumes:
-      - ./:/usr/src/code
-    ports:
-      - "8708:8708"
+      - ./src:/usr/src/code/src
+      - ./tests:/usr/src/code/tests
+      - ./dev:/usr/src/code/dev
+      - ./phpunit.xml:/usr/src/code/phpunit.xml
+      - ./dev/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
 
 networks:
-  database:
+  pools:

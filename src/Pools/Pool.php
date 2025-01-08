@@ -219,10 +219,6 @@ class Pool
         $this->pool[] = $connection;
         unset($this->active[$connection->getID()]);
 
-        if (!$connection->isHealthy()) {
-            $this->destroy($connection);
-        }
-
         return $this;
     }
 
@@ -241,12 +237,21 @@ class Pool
     public function reclaim(Connection $connection = null): self
     {
         if ($connection !== null) {
-            $this->push($connection);
+            if ($connection->isHealthy()) {
+                $this->push($connection);
+            } else {
+                $this->destroy($connection);
+            }
             return $this;
         }
 
         foreach ($this->active as $connection) {
-            $this->push($connection);
+            if ($connection->isHealthy()) {
+                $this->push($connection);
+                continue;
+            }
+
+            $this->destroy($connection);
         }
 
         return $this;

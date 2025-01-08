@@ -274,7 +274,7 @@ class PoolTest extends TestCase
 
         $connection2 = $object->pop();
         $connection1 = $object->pop();
-        
+
         $this->assertNotEquals($connection1Id, $connection1->getId());
         $this->assertEquals($connection2Id, $connection2->getId());
     }

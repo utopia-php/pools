@@ -216,8 +216,12 @@ class Pool
      */
     public function push(Connection $connection): self
     {
-        array_push($this->pool, $connection);
+        $this->pool[] = $connection;
         unset($this->active[$connection->getID()]);
+
+        if (!$connection->isHealthy()) {
+            $this->destroy($connection);
+        }
 
         return $this;
     }
@@ -256,13 +260,13 @@ class Pool
     public function destroy(Connection $connection = null): self
     {
         if ($connection !== null) {
-            array_push($this->pool, true);
+            $this->pool[] = true;
             unset($this->active[$connection->getID()]);
             return $this;
         }
 
         foreach ($this->active as $connection) {
-            array_push($this->pool, true);
+            $this->pool[] = true;
             unset($this->active[$connection->getID()]);
         }
 

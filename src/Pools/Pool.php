@@ -198,10 +198,11 @@ class Pool
         }
 
         if ($connection instanceof Connection) { // connection is available, return it
-            $connection
-                ->setID($this->getName().'-'.uniqid())
-                ->setPool($this)
-            ;
+            if (empty($connection->getID())) {
+                $connection->setID($this->getName() . '-' . uniqid());
+            }
+
+            $connection->setPool($this);
 
             $this->active[$connection->getID()] = $connection;
             return $connection;
@@ -216,7 +217,7 @@ class Pool
      */
     public function push(Connection $connection): self
     {
-        array_push($this->pool, $connection);
+        $this->pool[] = $connection;
         unset($this->active[$connection->getID()]);
 
         return $this;
@@ -237,12 +238,21 @@ class Pool
     public function reclaim(Connection $connection = null): self
     {
         if ($connection !== null) {
-            $this->push($connection);
+            if ($connection->isHealthy()) {
+                $this->push($connection);
+            } else {
+                $this->destroy($connection);
+            }
             return $this;
         }
 
         foreach ($this->active as $connection) {
-            $this->push($connection);
+            if ($connection->isHealthy()) {
+                $this->push($connection);
+                continue;
+            }
+
+            $this->destroy($connection);
         }
 
         return $this;
@@ -256,13 +266,13 @@ class Pool
     public function destroy(Connection $connection = null): self
     {
         if ($connection !== null) {
-            array_push($this->pool, true);
+            $this->pool[] = true;
             unset($this->active[$connection->getID()]);
             return $this;
         }
 
         foreach ($this->active as $connection) {
-            array_push($this->pool, true);
+            $this->pool[] = true;
             unset($this->active[$connection->getID()]);
         }
 

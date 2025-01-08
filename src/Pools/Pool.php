@@ -198,10 +198,11 @@ class Pool
         }
 
         if ($connection instanceof Connection) { // connection is available, return it
-            $connection
-                ->setID($this->getName().'-'.uniqid())
-                ->setPool($this)
-            ;
+            if (empty($connection->getID())) {
+                $connection->setID($this->getName() . '-' . uniqid());
+            }
+
+            $connection->setPool($this);
 
             $this->active[$connection->getID()] = $connection;
             return $connection;

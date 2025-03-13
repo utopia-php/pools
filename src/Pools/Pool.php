@@ -153,6 +153,25 @@ class Pool
     }
 
     /**
+     * Execute a callback with a managed connection
+     *
+     * @param callable(mixed): mixed $callback Function that receives the connection resource
+     * @return mixed Return value from the callback
+     */
+    public function use(callable $callback): mixed
+    {
+        $connection = null;
+        try {
+            $connection = $this->pop();
+            return $callback($connection->getResource());
+        } finally {
+            if ($connection !== null) {
+                $this->reclaim($connection);
+            }
+        }
+    }
+
+    /**
      * Summary:
      *  1. Try to get a connection from the pool
      *  2. If no connection is available, wait for one to be released
@@ -160,6 +179,7 @@ class Pool
      *  4. If a connection is available, return it
      *
      * @return Connection
+     * @internal Please migrate to `use`.
      */
     public function pop(): Connection
     {

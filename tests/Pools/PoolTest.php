@@ -105,6 +105,17 @@ class PoolTest extends TestCase
         $this->assertInstanceOf(Connection::class, $this->object->pop());
     }
 
+    public function testUse(): void
+    {
+        $this->assertEquals(5, $this->object->count());
+        $this->object->use(function ($resource) {
+            $this->assertEquals(4, $this->object->count());
+            $this->assertEquals('x', $resource);
+        });
+
+        $this->assertEquals(5, $this->object->count());
+    }
+
     public function testPush(): void
     {
         $this->assertEquals(5, $this->object->count());

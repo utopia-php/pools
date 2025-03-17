@@ -6,6 +6,7 @@ use Exception;
 use PHPUnit\Framework\TestCase;
 use Utopia\Pools\Connection;
 use Utopia\Pools\Pool;
+use Utopia\Telemetry\Adapter\Test as TestTelemetry;
 
 class PoolTest extends TestCase
 {
@@ -288,5 +289,40 @@ class PoolTest extends TestCase
 
         $this->assertNotEquals($connection1Id, $connection1->getId());
         $this->assertEquals($connection2Id, $connection2->getId());
+    }
+
+    public function testTelemetry(): void
+    {
+        $telemetry = new TestTelemetry();
+        $this->object->setTelemetry($telemetry);
+
+        $allocate = function (int $amount, callable $assertion) {
+            $connections = [];
+            for ($i = 0; $i < $amount; $i++) {
+                $connections[] = $this->object->pop();
+            }
+
+            $assertion();
+
+            foreach ($connections as $connection) {
+                $this->object->reclaim($connection);
+            }
+        };
+
+        $this->assertEquals(5, $this->object->count());
+
+        $allocate(3, function () use ($telemetry) {
+            $this->assertEquals([1, 2, 3], $telemetry->gauges['pool.connection.open.count']->values);
+            $this->assertEquals([1, 2, 3], $telemetry->gauges['pool.connection.active.count']->values);
+            $this->assertEquals([0, 0, 0], $telemetry->gauges['pool.connection.idle.count']->values);
+        });
+
+        $this->assertEquals(5, $this->object->count());
+
+        $allocate(1, function () use ($telemetry) {
+            $this->assertEquals([1, 2, 3, 3, 3, 3, 3], $telemetry->gauges['pool.connection.open.count']->values);
+            $this->assertEquals([1, 2, 3, 2, 1, 0, 1], $telemetry->gauges['pool.connection.active.count']->values);
+            $this->assertEquals([0, 0, 0, 1, 2, 3, 2], $telemetry->gauges['pool.connection.idle.count']->values);
+        });
     }
 }

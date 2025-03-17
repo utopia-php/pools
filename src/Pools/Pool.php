@@ -3,6 +3,10 @@
 namespace Utopia\Pools;
 
 use Exception;
+use Utopia\Telemetry\Adapter as Telemetry;
+use Utopia\Telemetry\Adapter\None as NoTelemetry;
+use Utopia\Telemetry\Gauge;
+use Utopia\Telemetry\Histogram;
 
 class Pool
 {
@@ -51,6 +55,15 @@ class Pool
      */
     protected array $active = [];
 
+    private Gauge $telemetryOpenConnections;
+    private Gauge $telemetryActiveConnections;
+    private Gauge $telemetryIdleConnections;
+    private Gauge $telemetryPoolCapacity;
+    private Histogram $telemetryWaitDuration;
+    private Histogram $telemetryUseDuration;
+    /** @var array<string, int|string> */
+    private array $telemetryAttributes;
+
     /**
      * @param string $name
      * @param int $size
@@ -62,6 +75,7 @@ class Pool
         $this->size = $size;
         $this->init = $init;
         $this->pool = array_fill(0, $size, true);
+        $this->setTelemetry(new NoTelemetry());
     }
 
     /**
@@ -152,6 +166,25 @@ class Pool
         return $this;
     }
 
+    public function setTelemetry(Telemetry $telemetry): void
+    {
+        $this->telemetryOpenConnections = $telemetry->createGauge('pool.connection.open.count');
+        $this->telemetryActiveConnections = $telemetry->createGauge('pool.connection.active.count');
+        $this->telemetryIdleConnections = $telemetry->createGauge('pool.connection.idle.count');
+        $this->telemetryPoolCapacity = $telemetry->createGauge('pool.connection.capacity.count');
+        $this->telemetryWaitDuration = $telemetry->createHistogram(
+            name: 'pool.connection.wait_time',
+            unit: 's',
+            advisory: ['ExplicitBucketBoundaries' =>  [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10]],
+        );
+        $this->telemetryUseDuration = $telemetry->createHistogram(
+            name: 'pool.connection.use_time',
+            unit: 's',
+            advisory: ['ExplicitBucketBoundaries' =>  [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10]],
+        );
+        $this->telemetryAttributes = ['pool' => $this->name, 'size' => $this->size];
+    }
+
     /**
      * Execute a callback with a managed connection
      *
@@ -160,12 +193,14 @@ class Pool
      */
     public function use(callable $callback): mixed
     {
+        $start = microtime(true);
         $connection = null;
         try {
             $connection = $this->pop();
             return $callback($connection->getResource());
         } finally {
             if ($connection !== null) {
+                $this->telemetryUseDuration->record(microtime(true) - $start, $this->telemetryAttributes);
                 $this->reclaim($connection);
             }
         }
@@ -184,51 +219,59 @@ class Pool
     public function pop(): Connection
     {
         $attempts = 0;
+        $totalSleepTime = 0;
 
-        do {
-            $attempts++;
-            $connection = array_pop($this->pool);
-
-            if (is_null($connection)) {
-                if ($attempts >= $this->getRetryAttempts()) {
-                    throw new Exception("Pool '{$this->name}' is empty (size {$this->size})");
-                }
-
-                sleep($this->getRetrySleep());
-            } else {
-                break;
-            }
-        } while ($attempts < $this->getRetryAttempts());
-
-        if ($connection === true) { // Pool has space, create connection
-            $attempts = 0;
-
+        try {
             do {
-                try {
-                    $attempts++;
-                    $connection = new Connection(($this->init)());
-                    break; // leave loop if successful
-                } catch (\Exception $e) {
-                    if ($attempts >= $this->getReconnectAttempts()) {
-                        throw new \Exception('Failed to create connection: ' . $e->getMessage());
-                    }
-                    sleep($this->getReconnectSleep());
-                }
-            } while ($attempts < $this->getReconnectAttempts());
-        }
+                $attempts++;
+                $connection = array_pop($this->pool);
 
-        if ($connection instanceof Connection) { // connection is available, return it
-            if (empty($connection->getID())) {
-                $connection->setID($this->getName() . '-' . uniqid());
+                if (is_null($connection)) {
+                    if ($attempts >= $this->getRetryAttempts()) {
+                        throw new Exception("Pool '{$this->name}' is empty (size {$this->size})");
+                    }
+
+                    $totalSleepTime += $this->getRetrySleep();
+                    sleep($this->getRetrySleep());
+                } else {
+                    break;
+                }
+            } while ($attempts < $this->getRetryAttempts());
+
+            if ($connection === true) { // Pool has space, create connection
+                $attempts = 0;
+
+                do {
+                    try {
+                        $attempts++;
+                        $connection = new Connection(($this->init)());
+                        break; // leave loop if successful
+                    } catch (\Exception $e) {
+                        if ($attempts >= $this->getReconnectAttempts()) {
+                            throw new \Exception('Failed to create connection: ' . $e->getMessage());
+                        }
+                        $totalSleepTime += $this->getReconnectSleep();
+                        sleep($this->getReconnectSleep());
+                    }
+                } while ($attempts < $this->getReconnectAttempts());
             }
 
-            $connection->setPool($this);
+            if ($connection instanceof Connection) { // connection is available, return it
+                if (empty($connection->getID())) {
+                    $connection->setID($this->getName() . '-' . uniqid());
+                }
 
-            $this->active[$connection->getID()] = $connection;
-            return $connection;
+                $connection->setPool($this);
+
+                $this->active[$connection->getID()] = $connection;
+                return $connection;
+            }
+
+            throw new Exception('Failed to get a connection from the pool');
+        } finally {
+            $this->recordPoolTelemetry();
+            $this->telemetryWaitDuration->record($totalSleepTime, $this->telemetryAttributes);
         }
-
-        throw new Exception('Failed to get a connection from the pool');
     }
 
     /**
@@ -237,10 +280,14 @@ class Pool
      */
     public function push(Connection $connection): self
     {
-        $this->pool[] = $connection;
-        unset($this->active[$connection->getID()]);
+        try {
+            $this->pool[] = $connection;
+            unset($this->active[$connection->getID()]);
 
-        return $this;
+            return $this;
+        } finally {
+            $this->recordPoolTelemetry();
+        }
     }
 
     /**
@@ -285,18 +332,22 @@ class Pool
      */
     public function destroy(Connection $connection = null): self
     {
-        if ($connection !== null) {
-            $this->pool[] = true;
-            unset($this->active[$connection->getID()]);
+        try {
+            if ($connection !== null) {
+                $this->pool[] = true;
+                unset($this->active[$connection->getID()]);
+                return $this;
+            }
+
+            foreach ($this->active as $connection) {
+                $this->pool[] = true;
+                unset($this->active[$connection->getID()]);
+            }
+
             return $this;
+        } finally {
+            $this->recordPoolTelemetry();
         }
-
-        foreach ($this->active as $connection) {
-            $this->pool[] = true;
-            unset($this->active[$connection->getID()]);
-        }
-
-        return $this;
     }
 
     /**
@@ -313,5 +364,17 @@ class Pool
     public function isFull(): bool
     {
         return count($this->pool) === $this->size;
+    }
+
+    private function recordPoolTelemetry(): void
+    {
+        // Connections get removed from $this->pool when they are active
+        $activeConnections = count($this->active);
+        $existingConnections = count($this->pool);
+        $idleConnections = count(array_filter($this->pool, fn ($data) => $data instanceof Connection));
+        $this->telemetryActiveConnections->record($activeConnections, $this->telemetryAttributes);
+        $this->telemetryIdleConnections->record($idleConnections, $this->telemetryAttributes);
+        $this->telemetryOpenConnections->record($activeConnections + $idleConnections, $this->telemetryAttributes);
+        $this->telemetryPoolCapacity->record($activeConnections + $existingConnections, $this->telemetryAttributes);
     }
 }

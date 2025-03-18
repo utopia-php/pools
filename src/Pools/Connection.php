@@ -10,14 +10,11 @@ class Connection
 
     protected ?Pool $pool = null;
 
-    protected bool $healthy = true;
-
     /**
      * @param mixed $resource
      */
-    public function __construct(
-        protected mixed $resource,
-    ) {
+    public function __construct(protected mixed $resource)
+    {
     }
 
     /**
@@ -96,23 +93,5 @@ class Connection
         }
 
         return $this->pool->destroy($this);
-    }
-
-    /**
-     * @param bool $healthy
-     * @return self
-     */
-    public function setHealthy(bool $healthy): self
-    {
-        $this->healthy = $healthy;
-        return $this;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isHealthy(): bool
-    {
-        return $this->healthy;
     }
 }

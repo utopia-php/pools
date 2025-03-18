@@ -259,38 +259,6 @@ class PoolTest extends TestCase
         $this->assertEquals('y', $connection2->getResource());
     }
 
-    public function testUnhealthyConnectionsPurged(): void
-    {
-        $object = new Pool('testDestroy', 2, function () {
-            return 'x';
-        });
-
-        $this->assertEquals(2, $object->count());
-
-        $connection1 = $object->pop();
-        $connection2 = $object->pop();
-
-        $connection1Id = $connection1->getId();
-        $connection2Id = $connection2->getId();
-
-        $this->assertEquals(0, $object->count());
-
-        $this->assertEquals('x', $connection1->getResource());
-        $this->assertEquals('x', $connection2->getResource());
-
-        $connection1->setHealthy(false);
-
-        $object->reclaim();
-
-        $this->assertEquals(2, $object->count());
-
-        $connection2 = $object->pop();
-        $connection1 = $object->pop();
-
-        $this->assertNotEquals($connection1Id, $connection1->getId());
-        $this->assertEquals($connection2Id, $connection2->getId());
-    }
-
     public function testTelemetry(): void
     {
         $telemetry = new TestTelemetry();

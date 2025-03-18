@@ -305,21 +305,12 @@ class Pool
     public function reclaim(Connection $connection = null): self
     {
         if ($connection !== null) {
-            if ($connection->isHealthy()) {
-                $this->push($connection);
-            } else {
-                $this->destroy($connection);
-            }
+            $this->push($connection);
             return $this;
         }
 
         foreach ($this->active as $connection) {
-            if ($connection->isHealthy()) {
-                $this->push($connection);
-                continue;
-            }
-
-            $this->destroy($connection);
+            $this->push($connection);
         }
 
         return $this;

@@ -97,4 +97,33 @@ class GroupTest extends TestCase
 
         $this->assertEquals(2, $this->object->get('test')->getReconnectSleep());
     }
+
+    public function testUse(): void
+    {
+        $pool1 = new Pool('pool1', 1, fn () => '1');
+        $pool2 = new Pool('pool2', 1, fn () => '2');
+        $pool3 = new Pool('pool3', 1, fn () => '3');
+
+        $this->object->add($pool1);
+        $this->object->add($pool2);
+        $this->object->add($pool3);
+
+        $this->assertEquals(1, $pool1->count());
+        $this->assertEquals(1, $pool2->count());
+        $this->assertEquals(1, $pool3->count());
+
+        // @phpstan-ignore argument.type
+        $this->object->use(['pool1', 'pool3'], function ($one, $three) use ($pool1, $pool2, $pool3) {
+            $this->assertEquals('1', $one);
+            $this->assertEquals('3', $three);
+
+            $this->assertEquals(0, $pool1->count());
+            $this->assertEquals(1, $pool2->count());
+            $this->assertEquals(0, $pool3->count());
+        });
+
+        $this->assertEquals(1, $pool1->count());
+        $this->assertEquals(1, $pool2->count());
+        $this->assertEquals(1, $pool3->count());
+    }
 }

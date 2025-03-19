@@ -28,7 +28,7 @@ class Group
      */
     public function get(string $name): Pool
     {
-        return $this->pools[$name] ??  throw new Exception("Pool '{$name}'  not found");
+        return $this->pools[$name] ?? throw new Exception("Pool '{$name}' not found");
     }
 
     /**
@@ -51,6 +51,41 @@ class Group
         }
 
         return $this;
+    }
+
+    /**
+     * Execute a callback with a managed connection
+     *
+     * @param string[] $names Name of resources
+     * @param callable(mixed...): mixed $callback Function that receives the connection resources
+     * @return mixed Return value from the callback
+     */
+    public function use(array $names, callable $callback): mixed
+    {
+        if (empty($names)) {
+            throw new Exception("Cannot use with empty names");
+        }
+        return $this->useInternal($names, $callback);
+    }
+
+    /**
+     * Internal recursive callback for `use`.
+     *
+     * @param string[] $names Name of resources
+     * @param callable(mixed...): mixed $callback Function that receives the connection resources
+     * @param mixed[] $resources
+     * @return mixed
+     * @throws Exception
+     */
+    private function useInternal(array $names, callable $callback, array $resources = []): mixed
+    {
+        if (empty($names)) {
+            return $callback(...$resources);
+        }
+
+        return $this
+            ->get(array_shift($names))
+            ->use(fn ($resource) => $this->useInternal($names, $callback, array_merge($resources, [$resource])));
     }
 
     /**

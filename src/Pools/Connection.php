@@ -35,7 +35,7 @@ class Connection
      * @param string $id
      * @return $this<TResource>
      */
-    public function setID(string $id): self
+    public function setID(string $id): static
     {
         $this->id = $id;
         return $this;

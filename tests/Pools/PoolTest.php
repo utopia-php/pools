@@ -10,6 +10,9 @@ use Utopia\Telemetry\Adapter\Test as TestTelemetry;
 
 class PoolTest extends TestCase
 {
+    /**
+     * @var Pool<string>
+     */
     protected Pool $object;
 
     public function setUp(): void

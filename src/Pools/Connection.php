@@ -4,14 +4,20 @@ namespace Utopia\Pools;
 
 use Exception;
 
+/**
+ * @template TResource
+ */
 class Connection
 {
     protected string $id = '';
 
+    /**
+     * @var Pool<TResource>|null
+     */
     protected ?Pool $pool = null;
 
     /**
-     * @param mixed $resource
+     * @param TResource $resource
      */
     public function __construct(protected mixed $resource)
     {
@@ -27,16 +33,16 @@ class Connection
 
     /**
      * @param string $id
-     * @return self
+     * @return $this<TResource>
      */
-    public function setID(string $id): self
+    public function setID(string $id): static
     {
         $this->id = $id;
         return $this;
     }
 
     /**
-     * @return mixed
+     * @return TResource
      */
     public function getResource(): mixed
     {
@@ -44,17 +50,17 @@ class Connection
     }
 
     /**
-     * @param mixed $resource
-     * @return self
+     * @param TResource $resource
+     * @return $this<TResource>
      */
-    public function setResource(mixed $resource): self
+    public function setResource(mixed $resource): static
     {
         $this->resource = $resource;
         return $this;
     }
 
     /**
-     * @return Pool
+     * @return Pool<TResource>|null
      */
     public function getPool(): ?Pool
     {
@@ -62,17 +68,18 @@ class Connection
     }
 
     /**
-     * @param Pool $pool
-     * @return self
+     * @param Pool<TResource> $pool
+     * @return $this<TResource>
      */
-    public function setPool(Pool &$pool): self
+    public function setPool(Pool $pool): static
     {
         $this->pool = $pool;
         return $this;
     }
 
     /**
-     * @return Pool
+     * @return Pool<TResource>
+     * @throws Exception
      */
     public function reclaim(): Pool
     {
@@ -84,7 +91,8 @@ class Connection
     }
 
     /**
-     * @return Pool
+     * @return Pool<TResource>
+     * @throws Exception
      */
     public function destroy(): Pool
     {

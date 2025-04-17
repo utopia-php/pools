@@ -8,15 +8,15 @@ use Utopia\Telemetry\Adapter as Telemetry;
 class Group
 {
     /**
-     * @var Pool[]
+     * @var array<Pool<covariant mixed>>
      */
     protected array $pools = [];
 
     /**
-     * @param Pool $pool
-     * @return self
+     * @param Pool<covariant mixed> $pool
+     * @return static
      */
-    public function add(Pool $pool): self
+    public function add(Pool $pool): static
     {
         $this->pools[$pool->getName()] = $pool;
         return $this;
@@ -24,27 +24,28 @@ class Group
 
     /**
      * @param string $name
-     * @return Pool
+     * @return Pool<covariant mixed>
+     * @throws Exception
      */
     public function get(string $name): Pool
     {
-        return $this->pools[$name] ?? throw new Exception("Pool '{$name}' not found");
+        return $this->pools[$name] ?? throw new Exception("Pool '$name' not found");
     }
 
     /**
      * @param string $name
-     * @return self
+     * @return static
      */
-    public function remove(string $name): self
+    public function remove(string $name): static
     {
         unset($this->pools[$name]);
         return $this;
     }
 
     /**
-     * @return self
+     * @return static
      */
-    public function reclaim(): self
+    public function reclaim(): static
     {
         foreach ($this->pools as $pool) {
             $pool->reclaim();
@@ -56,9 +57,11 @@ class Group
     /**
      * Execute a callback with a managed connection
      *
-     * @param string[] $names Name of resources
-     * @param callable(mixed...): mixed $callback Function that receives the connection resources
-     * @return mixed Return value from the callback
+     * @template TReturn
+     * @param array<string> $names Name of resources
+     * @param callable(mixed...): TReturn $callback Function that receives the connection resources
+     * @return TReturn Return value from the callback
+     * @throws Exception
      */
     public function use(array $names, callable $callback): mixed
     {
@@ -71,10 +74,11 @@ class Group
     /**
      * Internal recursive callback for `use`.
      *
-     * @param string[] $names Name of resources
-     * @param callable(mixed...): mixed $callback Function that receives the connection resources
-     * @param mixed[] $resources
-     * @return mixed
+     * @template TReturn
+     * @param array<string> $names Name of resources
+     * @param callable(mixed...): TReturn $callback Function that receives the connection resources
+     * @param array<mixed> $resources
+     * @return TReturn
      * @throws Exception
      */
     private function useInternal(array $names, callable $callback, array $resources = []): mixed
@@ -90,9 +94,9 @@ class Group
 
     /**
      * @param int $reconnectAttempts
-     * @return self
+     * @return static
      */
-    public function setReconnectAttempts(int $reconnectAttempts): self
+    public function setReconnectAttempts(int $reconnectAttempts): static
     {
         foreach ($this->pools as $pool) {
             $pool->setReconnectAttempts($reconnectAttempts);
@@ -103,9 +107,9 @@ class Group
 
     /**
      * @param int $reconnectSleep
-     * @return self
+     * @return static
      */
-    public function setReconnectSleep(int $reconnectSleep): self
+    public function setReconnectSleep(int $reconnectSleep): static
     {
         foreach ($this->pools as $pool) {
             $pool->setReconnectSleep($reconnectSleep);
@@ -114,7 +118,7 @@ class Group
         return $this;
     }
 
-    public function setTelemetry(Telemetry $telemetry): self
+    public function setTelemetry(Telemetry $telemetry): static
     {
         foreach ($this->pools as $pool) {
             $pool->setTelemetry($telemetry);

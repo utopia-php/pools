@@ -8,6 +8,9 @@ use Utopia\Telemetry\Adapter\None as NoTelemetry;
 use Utopia\Telemetry\Gauge;
 use Utopia\Telemetry\Histogram;
 
+/**
+ * @template TResource
+ */
 class Pool
 {
     /**
@@ -46,12 +49,12 @@ class Pool
     protected int $retrySleep = 1; // seconds
 
     /**
-     * @var array<Connection|true>
+     * @var array<Connection<TResource>|true>
      */
     protected array $pool = [];
 
     /**
-     * @var array<string, Connection>
+     * @var array<string, Connection<TResource>>
      */
     protected array $active = [];
 
@@ -67,7 +70,7 @@ class Pool
     /**
      * @param string $name
      * @param int $size
-     * @param callable $init
+     * @param callable(): TResource $init
      */
     public function __construct(string $name, int $size, callable $init)
     {
@@ -104,9 +107,9 @@ class Pool
 
     /**
      * @param int $reconnectAttempts
-     * @return self
+     * @return $this<TResource>
      */
-    public function setReconnectAttempts(int $reconnectAttempts): self
+    public function setReconnectAttempts(int $reconnectAttempts): static
     {
         $this->reconnectAttempts = $reconnectAttempts;
         return $this;
@@ -122,9 +125,9 @@ class Pool
 
     /**
      * @param int $reconnectSleep
-     * @return self
+     * @return $this<TResource>
      */
-    public function setReconnectSleep(int $reconnectSleep): self
+    public function setReconnectSleep(int $reconnectSleep): static
     {
         $this->reconnectSleep = $reconnectSleep;
         return $this;
@@ -140,9 +143,9 @@ class Pool
 
     /**
      * @param int $retryAttempts
-     * @return self
+     * @return $this<TResource>
      */
-    public function setRetryAttempts(int $retryAttempts): self
+    public function setRetryAttempts(int $retryAttempts): static
     {
         $this->retryAttempts = $retryAttempts;
         return $this;
@@ -158,15 +161,19 @@ class Pool
 
     /**
      * @param int $retrySleep
-     * @return self
+     * @return $this<TResource>
      */
-    public function setRetrySleep(int $retrySleep): self
+    public function setRetrySleep(int $retrySleep): static
     {
         $this->retrySleep = $retrySleep;
         return $this;
     }
 
-    public function setTelemetry(Telemetry $telemetry): void
+    /**
+     * @param Telemetry $telemetry
+     * @return $this<TResource>
+     */
+    public function setTelemetry(Telemetry $telemetry): static
     {
         $this->telemetryOpenConnections = $telemetry->createGauge('pool.connection.open.count');
         $this->telemetryActiveConnections = $telemetry->createGauge('pool.connection.active.count');
@@ -183,13 +190,16 @@ class Pool
             advisory: ['ExplicitBucketBoundaries' =>  [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10]],
         );
         $this->telemetryAttributes = ['pool' => $this->name, 'size' => $this->size];
+
+        return $this;
     }
 
     /**
      * Execute a callback with a managed connection
      *
-     * @param callable(mixed): mixed $callback Function that receives the connection resource
-     * @return mixed Return value from the callback
+     * @template T
+     * @param callable(mixed): T $callback Function that receives the connection resource
+     * @return T Return value from the callback
      */
     public function use(callable $callback): mixed
     {
@@ -213,7 +223,8 @@ class Pool
      *  3. If still no connection is available, throw an exception
      *  4. If a connection is available, return it
      *
-     * @return Connection
+     * @return Connection<TResource>
+     * @throws Exception
      * @internal Please migrate to `use`.
      */
     public function pop(): Connection
@@ -275,10 +286,10 @@ class Pool
     }
 
     /**
-     * @param Connection $connection
-     * @return self
+     * @param Connection<TResource> $connection
+     * @return $this<TResource>
      */
-    public function push(Connection $connection): self
+    public function push(Connection $connection): static
     {
         try {
             $this->pool[] = $connection;
@@ -299,10 +310,10 @@ class Pool
     }
 
     /**
-     * @param Connection|null $connection
-     * @return self
+     * @param Connection<TResource>|null $connection
+     * @return $this<TResource>
      */
-    public function reclaim(Connection $connection = null): self
+    public function reclaim(Connection $connection = null): static
     {
         if ($connection !== null) {
             $this->push($connection);
@@ -316,12 +327,11 @@ class Pool
         return $this;
     }
 
-
     /**
-     * @param Connection|null $connection
-     * @return self
+     * @param Connection<TResource>|null $connection
+     * @return $this<TResource>
      */
-    public function destroy(Connection $connection = null): self
+    public function destroy(Connection $connection = null): static
     {
         try {
             if ($connection !== null) {

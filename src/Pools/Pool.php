@@ -198,7 +198,7 @@ class Pool
      * Execute a callback with a managed connection
      *
      * @template T
-     * @param callable(mixed): T $callback Function that receives the connection resource
+     * @param callable(TResource): T $callback Function that receives the connection resource
      * @return T Return value from the callback
      */
     public function use(callable $callback): mixed

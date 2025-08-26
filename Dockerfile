@@ -8,7 +8,7 @@ COPY composer.json /usr/local/src/
 RUN composer install --ignore-platform-reqs --optimize-autoloader \
     --no-plugins --no-scripts --prefer-dist
     
-FROM php:8.3-cli-alpine AS compile
+FROM php:8.4-cli-alpine AS compile
 
 ENV PHP_REDIS_VERSION=6.1.0 \
     PHP_SWOOLE_VERSION=v5.1.3 \

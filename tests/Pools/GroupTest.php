@@ -11,6 +11,7 @@ class GroupTest extends TestCase
 {
     protected Group $object;
 
+    #[\Override]
     public function setUp(): void
     {
         $this->object = new Group();
@@ -18,18 +19,14 @@ class GroupTest extends TestCase
 
     public function testAdd(): void
     {
-        $this->object->add(new Pool('test', 1, function () {
-            return 'x';
-        }));
+        $this->object->add(new Pool('test', 1, fn () => 'x'));
 
         $this->assertInstanceOf(Pool::class, $this->object->get('test'));
     }
 
     public function testGet(): void
     {
-        $this->object->add(new Pool('test', 1, function () {
-            return 'x';
-        }));
+        $this->object->add(new Pool('test', 1, fn () => 'x'));
 
         $this->assertInstanceOf(Pool::class, $this->object->get('test'));
 
@@ -40,9 +37,7 @@ class GroupTest extends TestCase
 
     public function testRemove(): void
     {
-        $this->object->add(new Pool('test', 1, function () {
-            return 'x';
-        }));
+        $this->object->add(new Pool('test', 1, fn () => 'x'));
 
         $this->assertInstanceOf(Pool::class, $this->object->get('test'));
 
@@ -55,9 +50,7 @@ class GroupTest extends TestCase
 
     public function testReset(): void
     {
-        $this->object->add(new Pool('test', 5, function () {
-            return 'x';
-        }));
+        $this->object->add(new Pool('test', 5, fn () => 'x'));
 
         $this->assertEquals(5, $this->object->get('test')->count());
 
@@ -74,9 +67,7 @@ class GroupTest extends TestCase
 
     public function testReconnectAttempts(): void
     {
-        $this->object->add(new Pool('test', 5, function () {
-            return 'x';
-        }));
+        $this->object->add(new Pool('test', 5, fn () => 'x'));
 
         $this->assertEquals(3, $this->object->get('test')->getReconnectAttempts());
 
@@ -87,9 +78,7 @@ class GroupTest extends TestCase
 
     public function testReconnectSleep(): void
     {
-        $this->object->add(new Pool('test', 5, function () {
-            return 'x';
-        }));
+        $this->object->add(new Pool('test', 5, fn () => 'x'));
 
         $this->assertEquals(1, $this->object->get('test')->getReconnectSleep());
 
@@ -113,7 +102,7 @@ class GroupTest extends TestCase
         $this->assertEquals(1, $pool3->count());
 
         // @phpstan-ignore argument.type
-        $this->object->use(['pool1', 'pool3'], function ($one, $three) use ($pool1, $pool2, $pool3) {
+        $this->object->use(['pool1', 'pool3'], function ($one, $three) use ($pool1, $pool2, $pool3): void {
             $this->assertEquals('1', $one);
             $this->assertEquals('3', $three);
 

@@ -14,16 +14,6 @@ use Utopia\Telemetry\Histogram;
 class Pool
 {
     /**
-     * @var string
-     */
-    protected string $name;
-
-    /**
-     * @var int
-     */
-    protected int $size = 0;
-
-    /**
      * @var callable
      */
     protected $init = null;
@@ -72,12 +62,10 @@ class Pool
      * @param int $size
      * @param callable(): TResource $init
      */
-    public function __construct(string $name, int $size, callable $init)
+    public function __construct(protected string $name, protected int $size, callable $init)
     {
-        $this->name = $name;
-        $this->size = $size;
         $this->init = $init;
-        $this->pool = array_fill(0, $size, true);
+        $this->pool = array_fill(0, $this->size, true);
         $this->setTelemetry(new NoTelemetry());
     }
 
@@ -313,7 +301,7 @@ class Pool
      * @param Connection<TResource>|null $connection
      * @return $this<TResource>
      */
-    public function reclaim(Connection $connection = null): static
+    public function reclaim(?Connection $connection = null): static
     {
         if ($connection !== null) {
             $this->push($connection);
@@ -331,7 +319,7 @@ class Pool
      * @param Connection<TResource>|null $connection
      * @return $this<TResource>
      */
-    public function destroy(Connection $connection = null): static
+    public function destroy(?Connection $connection = null): static
     {
         try {
             if ($connection !== null) {

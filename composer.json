@@ -24,7 +24,7 @@
         "test": "./vendor/bin/phpunit --configuration phpunit.xml --debug"
     },
     "require": {
-        "php": ">=8.3",
+        "php": ">=8.4",
         "utopia-php/telemetry": "0.1.*"
     },
     "require-dev": {
@@ -39,7 +39,7 @@
     },
     "config": {
         "platform": {
-            "php": "8.3"
+            "php": "8.4"
         },
         "allow-plugins": {
             "php-http/discovery": false,

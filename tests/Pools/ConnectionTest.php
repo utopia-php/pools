@@ -14,6 +14,7 @@ class ConnectionTest extends TestCase
      */
     protected Connection $object;
 
+    #[\Override]
     public function setUp(): void
     {
         $this->object = new Connection('x');
@@ -53,9 +54,7 @@ class ConnectionTest extends TestCase
 
     public function testSetPool(): void
     {
-        $pool = new Pool('test', 1, function () {
-            return 'x';
-        });
+        $pool = new Pool('test', 1, fn () => 'x');
 
         $this->assertNull($this->object->getPool());
         $this->assertInstanceOf(Connection::class, $this->object->setPool($pool));
@@ -63,9 +62,7 @@ class ConnectionTest extends TestCase
 
     public function testGetPool(): void
     {
-        $pool = new Pool('test', 1, function () {
-            return 'x';
-        });
+        $pool = new Pool('test', 1, fn () => 'x');
 
         $this->assertNull($this->object->getPool());
         $this->assertInstanceOf(Connection::class, $this->object->setPool($pool));
@@ -82,9 +79,7 @@ class ConnectionTest extends TestCase
 
     public function testReclaim(): void
     {
-        $pool = new Pool('test', 2, function () {
-            return 'x';
-        });
+        $pool = new Pool('test', 2, fn () => 'x');
 
         $this->assertEquals(2, $pool->count());
 

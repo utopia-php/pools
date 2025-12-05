@@ -15,11 +15,10 @@ class PoolTest extends TestCase
      */
     protected Pool $object;
 
+    #[\Override]
     public function setUp(): void
     {
-        $this->object = new Pool('test', 5, function () {
-            return 'x';
-        });
+        $this->object = new Pool('test', 5, fn () => 'x');
     }
 
     public function testGetName(): void
@@ -112,7 +111,7 @@ class PoolTest extends TestCase
     public function testUse(): void
     {
         $this->assertEquals(5, $this->object->count());
-        $this->object->use(function ($resource) {
+        $this->object->use(function ($resource): void {
             $this->assertEquals(4, $this->object->count());
             $this->assertEquals('x', $resource);
         });
@@ -267,7 +266,7 @@ class PoolTest extends TestCase
         $telemetry = new TestTelemetry();
         $this->object->setTelemetry($telemetry);
 
-        $allocate = function (int $amount, callable $assertion) {
+        $allocate = function (int $amount, callable $assertion): void {
             $connections = [];
             for ($i = 0; $i < $amount; $i++) {
                 $connections[] = $this->object->pop();
@@ -282,7 +281,7 @@ class PoolTest extends TestCase
 
         $this->assertEquals(5, $this->object->count());
 
-        $allocate(3, function () use ($telemetry) {
+        $allocate(3, function () use ($telemetry): void {
             $this->assertEquals([1, 2, 3], $telemetry->gauges['pool.connection.open.count']->values);
             $this->assertEquals([1, 2, 3], $telemetry->gauges['pool.connection.active.count']->values);
             $this->assertEquals([0, 0, 0], $telemetry->gauges['pool.connection.idle.count']->values);
@@ -290,7 +289,7 @@ class PoolTest extends TestCase
 
         $this->assertEquals(5, $this->object->count());
 
-        $allocate(1, function () use ($telemetry) {
+        $allocate(1, function () use ($telemetry): void {
             $this->assertEquals([1, 2, 3, 3, 3, 3, 3], $telemetry->gauges['pool.connection.open.count']->values);
             $this->assertEquals([1, 2, 3, 2, 1, 0, 1], $telemetry->gauges['pool.connection.active.count']->values);
             $this->assertEquals([0, 0, 0, 1, 2, 3, 2], $telemetry->gauges['pool.connection.idle.count']->values);

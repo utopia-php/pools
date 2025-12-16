@@ -3,6 +3,7 @@
 namespace Utopia\Pools;
 
 use Exception;
+use Utopia\Pools\Adapter as PoolAdapter;
 use Utopia\Telemetry\Adapter as Telemetry;
 use Utopia\Telemetry\Adapter\None as NoTelemetry;
 use Utopia\Telemetry\Gauge;
@@ -38,15 +39,17 @@ class Pool
      */
     protected int $retrySleep = 1; // seconds
 
-    /**
-     * @var array<Connection<TResource>|true>
-     */
-    protected array $pool = [];
+    protected PoolAdapter $pool;
 
     /**
      * @var array<string, Connection<TResource>>
      */
     protected array $active = [];
+
+    /**
+     * @var array<string, Connection<TResource>>
+    */
+    protected array $idle = [];
 
     private Gauge $telemetryOpenConnections;
     private Gauge $telemetryActiveConnections;
@@ -58,14 +61,16 @@ class Pool
     private array $telemetryAttributes;
 
     /**
+     * @param PoolAdapter $adapter
      * @param string $name
      * @param int $size
      * @param callable(): TResource $init
      */
-    public function __construct(protected string $name, protected int $size, callable $init)
+    public function __construct(PoolAdapter $adapter, protected string $name, protected int $size, callable $init)
     {
         $this->init = $init;
-        $this->pool = array_fill(0, $this->size, true);
+        $this->pool = $adapter;
+        $this->pool->fill($this->size, true);
         $this->setTelemetry(new NoTelemetry());
     }
 
@@ -223,7 +228,7 @@ class Pool
         try {
             do {
                 $attempts++;
-                $connection = array_pop($this->pool);
+                $connection = $this->pool->pop(-1);
 
                 if (is_null($connection)) {
                     if ($attempts >= $this->getRetryAttempts()) {
@@ -261,7 +266,7 @@ class Pool
                 }
 
                 $connection->setPool($this);
-
+                unset($this->idle[$connection->getID()]);
                 $this->active[$connection->getID()] = $connection;
                 return $connection;
             }
@@ -280,8 +285,9 @@ class Pool
     public function push(Connection $connection): static
     {
         try {
-            $this->pool[] = $connection;
+            $this->pool->push($connection);
             unset($this->active[$connection->getID()]);
+            $this->idle[$connection->getID()] = $connection;
 
             return $this;
         } finally {
@@ -294,7 +300,7 @@ class Pool
      */
     public function count(): int
     {
-        return count($this->pool);
+        return $this->pool->count();
     }
 
     /**
@@ -323,14 +329,14 @@ class Pool
     {
         try {
             if ($connection !== null) {
-                $this->pool[] = true;
-                unset($this->active[$connection->getID()]);
+                $this->pool->push(true);
+                unset($this->active[$connection->getID()], $this->idle[$connection->getID()]);
                 return $this;
             }
 
             foreach ($this->active as $connection) {
-                $this->pool[] = true;
-                unset($this->active[$connection->getID()]);
+                $this->pool->push(true);
+                unset($this->active[$connection->getID()], $this->idle[$connection->getID()]);
             }
 
             return $this;
@@ -344,7 +350,7 @@ class Pool
      */
     public function isEmpty(): bool
     {
-        return empty($this->pool);
+        return $this->pool->count() === 0;
     }
 
     /**
@@ -352,15 +358,15 @@ class Pool
      */
     public function isFull(): bool
     {
-        return count($this->pool) === $this->size;
+        return $this->pool->count() === $this->size;
     }
 
     private function recordPoolTelemetry(): void
     {
         // Connections get removed from $this->pool when they are active
         $activeConnections = count($this->active);
-        $existingConnections = count($this->pool);
-        $idleConnections = count(array_filter($this->pool, fn ($data) => $data instanceof Connection));
+        $existingConnections = $this->pool->count();
+        $idleConnections = count($this->idle);
         $this->telemetryActiveConnections->record($activeConnections, $this->telemetryAttributes);
         $this->telemetryIdleConnections->record($idleConnections, $this->telemetryAttributes);
         $this->telemetryOpenConnections->record($activeConnections + $idleConnections, $this->telemetryAttributes);

@@ -11,12 +11,14 @@ class Stack extends Adapter
 
     public function fill(int $size, mixed $value): static
     {
-        $this->pool = array_fill(0, $size, $value);
+        // Initialize empty pool (no pre-filling)
+        $this->pool = [];
         return $this;
     }
 
     public function push(mixed $connection): static
     {
+        // Push connection to pool
         $this->pool[] = $connection;
         return $this;
     }
@@ -29,10 +31,5 @@ class Stack extends Adapter
     public function count(): int
     {
         return count($this->pool);
-    }
-
-    public function run(callable $callback): mixed
-    {
-        return $callback($this->pool);
     }
 }

@@ -230,19 +230,32 @@ class Pool
         try {
             do {
                 $attempts++;
-                // If pool is empty and size limit not reached, create new connection
-                // Use lock to prevent race condition where multiple coroutines create connections simultaneously
-                $newConnection = $this->pool->withLock(function () {
+                // the connection creation block outside the lock so that other coroutines not get blocked in case of retries of a coroutine
+                // Lock: check + increment only
+                // Unlock
+                // Create connection (no lock)
+                // On failure: lock + decrement
+                $shouldCreateConnections = $this->pool->withLock(function (): bool {
                     if ($this->pool->count() === 0 && $this->connectionsCreated < $this->size) {
-                        $connection = $this->createConnection();
-                        $this->active[$connection->getID()] = $connection;
-                        return $connection;
+                        $this->connectionsCreated++;
+                        return true;
                     }
-                    return null;
+                    return false;
                 }, timeout: self::LOCK_TIMEOUT_IN_SECONDS);
 
-                if ($newConnection instanceof Connection) {
-                    return $newConnection;
+                if ($shouldCreateConnections) {
+                    try {
+                        $connection = $this->createConnection();
+                        $this->pool->withLock(function () use ($connection) {
+                            $this->active[$connection->getID()] = $connection;
+                        }, timeout: self::LOCK_TIMEOUT_IN_SECONDS);
+                        return $connection;
+                    } catch (\Exception $e) {
+                        $this->pool->withLock(function () {
+                            $this->connectionsCreated--;
+                        }, timeout: self::LOCK_TIMEOUT_IN_SECONDS);
+                        throw $e;
+                    }
                 }
 
                 $connection = $this->pool->pop(self::LOCK_TIMEOUT_IN_SECONDS);
@@ -277,8 +290,6 @@ class Pool
      */
     protected function createConnection(): Connection
     {
-        $this->connectionsCreated++;
-
         $connection = null;
         $attempts = 0;
         do {
@@ -288,7 +299,6 @@ class Pool
                 break;
             } catch (\Exception $e) {
                 if ($attempts >= $this->getReconnectAttempts()) {
-                    $this->connectionsCreated--;
                     throw new \Exception('Failed to create connection: ' . $e->getMessage());
                 }
                 sleep($this->getReconnectSleep());
@@ -296,7 +306,6 @@ class Pool
         } while ($attempts < $this->getReconnectAttempts());
 
         if ($connection === null) {
-            $this->connectionsCreated--;
             throw new \Exception('Failed to create connection');
         }
 
@@ -359,53 +368,47 @@ class Pool
      * @param Connection<TResource>|null $connection
      * @return $this<TResource>
      */
-    public function destroy(?Connection $connection = null): static
+    private function destroyConnection(?Connection $connection = null): static
     {
-        try {
-            if ($connection !== null) {
-                // Synchronize access to shared state and replacement connection creation
-                $newConnection = $this->pool->withLock(function () use ($connection) {
-                    $this->connectionsCreated--;
-                    unset($this->active[$connection->getID()]);
+        if ($connection !== null) {
+            $shouldCreate = $this->pool->withLock(function () use ($connection) {
+                $this->connectionsCreated--;
+                unset($this->active[$connection->getID()]);
+                if ($this->connectionsCreated < $this->size) {
+                    $this->connectionsCreated++;
+                    return true;
+                };
+                return false;
+            }, timeout: self::LOCK_TIMEOUT_IN_SECONDS);
 
-                    // Create a new connection to maintain pool size while holding the lock
-                    if ($this->connectionsCreated < $this->size) {
-                        return $this->createConnection();
-                    }
-                    return null;
-                }, timeout: self::LOCK_TIMEOUT_IN_SECONDS);
-
-                // Push the new connection to the pool if one was created
-                if ($newConnection !== null) {
-                    $this->pool->push($newConnection);
-                }
-
-                return $this;
-            }
-
-            // Get a stable copy of active connections to avoid modifying array during iteration
-            $activeConnections = array_values($this->active);
-
-            foreach ($activeConnections as $conn) {
-                // Synchronize access to shared state and replacement connection creation
-                $newConnection = $this->pool->withLock(function () use ($conn) {
-                    $this->connectionsCreated--;
-                    unset($this->active[$conn->getID()]);
-
-                    // Create a new connection to maintain pool size while holding the lock
-                    if ($this->connectionsCreated < $this->size) {
-                        return $this->createConnection();
-                    }
-                    return null;
-                }, timeout: self::LOCK_TIMEOUT_IN_SECONDS);
-
-                // Push the new connection to the pool if one was created
-                if ($newConnection !== null) {
-                    $this->pool->push($newConnection);
+            if ($shouldCreate) {
+                try {
+                    $this->pool->push($this->createConnection());
+                } catch (Exception $e) {
+                    $this->pool->withLock(function () {
+                        $this->connectionsCreated--;
+                    }, timeout: self::LOCK_TIMEOUT_IN_SECONDS);
+                    throw $e;
                 }
             }
 
             return $this;
+        }
+        $activeConnections = array_values($this->active);
+        foreach ($activeConnections as $conn) {
+            $this->destroy($conn);
+        }
+        return $this;
+    }
+
+    /**
+     * @param Connection<TResource>|null $connection
+     * @return $this<TResource>
+     */
+    public function destroy(?Connection $connection = null): static
+    {
+        try {
+            return $this->destroyConnection($connection);
         } finally {
             $this->recordPoolTelemetry();
         }

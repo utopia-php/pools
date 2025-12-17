@@ -241,7 +241,7 @@ class Pool
                     return null;
                 }, timeout: self::LOCK_TIMEOUT_IN_SECODNS);
 
-                if ($newConnection) {
+                if ($newConnection instanceof Connection) {
                     return $newConnection;
                 }
 

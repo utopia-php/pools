@@ -14,7 +14,7 @@ use Utopia\Telemetry\Histogram;
  */
 class Pool
 {
-    public const POP_TIMEOUT_IN_SECONDS = 3;
+    public const LOCK_TIMEOUT_IN_SECODNS = 3;
     /**
      * @var callable
      */
@@ -232,17 +232,20 @@ class Pool
                 $attempts++;
                 // If pool is empty and size limit not reached, create new connection
                 // Use lock to prevent race condition where multiple coroutines create connections simultaneously
-                $shouldCreate = $this->pool->withLock(function () {
-                    return $this->pool->count() === 0 && $this->connectionsCreated < $this->size;
-                }, timeout: self::POP_TIMEOUT_IN_SECONDS);
+                $newConnection = $this->pool->withLock(function () {
+                    if ($this->pool->count() === 0 && $this->connectionsCreated < $this->size) {
+                        $connection = $this->createConnection();
+                        $this->active[$connection->getID()] = $connection;
+                        return $connection;
+                    }
+                    return null;
+                }, timeout: self::LOCK_TIMEOUT_IN_SECODNS);
 
-                if ($shouldCreate) {
-                    $connection = $this->createConnection();
-                    $this->active[$connection->getID()] = $connection;
-                    return $connection;
+                if ($newConnection) {
+                    return $newConnection;
                 }
 
-                $connection = $this->pool->pop(self::POP_TIMEOUT_IN_SECONDS);
+                $connection = $this->pool->pop(self::LOCK_TIMEOUT_IN_SECODNS);
 
                 if ($connection === false || $connection === null) {
                     if ($attempts >= $this->getRetryAttempts()) {
@@ -370,7 +373,7 @@ class Pool
                         return $this->createConnection();
                     }
                     return null;
-                }, timeout: self::POP_TIMEOUT_IN_SECONDS);
+                }, timeout: self::LOCK_TIMEOUT_IN_SECODNS);
 
                 // Push the new connection to the pool if one was created
                 if ($newConnection !== null) {
@@ -394,7 +397,7 @@ class Pool
                         return $this->createConnection();
                     }
                     return null;
-                }, timeout: self::POP_TIMEOUT_IN_SECONDS);
+                }, timeout: self::LOCK_TIMEOUT_IN_SECODNS);
 
                 // Push the new connection to the pool if one was created
                 if ($newConnection !== null) {

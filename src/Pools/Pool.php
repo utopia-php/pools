@@ -14,7 +14,7 @@ use Utopia\Telemetry\Histogram;
  */
 class Pool
 {
-    public const LOCK_TIMEOUT_IN_SECODNS = 3;
+    public const LOCK_TIMEOUT_IN_SECONDS = 3;
     /**
      * @var callable
      */
@@ -239,13 +239,13 @@ class Pool
                         return $connection;
                     }
                     return null;
-                }, timeout: self::LOCK_TIMEOUT_IN_SECODNS);
+                }, timeout: self::LOCK_TIMEOUT_IN_SECONDS);
 
                 if ($newConnection instanceof Connection) {
                     return $newConnection;
                 }
 
-                $connection = $this->pool->pop(self::LOCK_TIMEOUT_IN_SECODNS);
+                $connection = $this->pool->pop(self::LOCK_TIMEOUT_IN_SECONDS);
 
                 if ($connection === false || $connection === null) {
                     if ($attempts >= $this->getRetryAttempts()) {
@@ -373,7 +373,7 @@ class Pool
                         return $this->createConnection();
                     }
                     return null;
-                }, timeout: self::LOCK_TIMEOUT_IN_SECODNS);
+                }, timeout: self::LOCK_TIMEOUT_IN_SECONDS);
 
                 // Push the new connection to the pool if one was created
                 if ($newConnection !== null) {
@@ -397,7 +397,7 @@ class Pool
                         return $this->createConnection();
                     }
                     return null;
-                }, timeout: self::LOCK_TIMEOUT_IN_SECODNS);
+                }, timeout: self::LOCK_TIMEOUT_IN_SECONDS);
 
                 // Push the new connection to the pool if one was created
                 if ($newConnection !== null) {

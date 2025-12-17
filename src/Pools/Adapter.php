@@ -15,4 +15,13 @@ abstract class Adapter
     abstract public function pop(int $timeout): mixed;
 
     abstract public function count(): int;
+
+    /**
+     * Execute a callback with lock protection
+     *
+     * @param callable $callback
+     * @param float $timeout Timeout in seconds
+     * @return mixed
+     */
+    abstract public function withLock(callable $callback, int $timeout): mixed;
 }

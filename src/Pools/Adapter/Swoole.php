@@ -43,4 +43,20 @@ class Swoole extends Adapter
     {
         return (int) $this->pool->length();
     }
+
+    public function withLock(callable $callback, int $timeout): mixed
+    {
+        // Acquire lock for thread-safe operations with timeout to prevent deadlock
+        $acquired = $this->lock->lockwait($timeout);
+
+        if (!$acquired) {
+            throw new \RuntimeException("Failed to acquire lock within {$timeout} seconds");
+        }
+
+        try {
+            return $callback();
+        } finally {
+            $this->lock->unlock();
+        }
+    }
 }

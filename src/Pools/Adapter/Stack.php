@@ -32,4 +32,9 @@ class Stack extends Adapter
     {
         return count($this->pool);
     }
+
+    public function withLock(callable $callback, int $timeout): mixed
+    {
+        return $callback();
+    }
 }

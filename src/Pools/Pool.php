@@ -14,7 +14,7 @@ use Utopia\Telemetry\Histogram;
  */
 class Pool
 {
-    public const POP_TIMEOUT_IN_SECODNS = 3;
+    public const POP_TIMEOUT_IN_SECONDS = 3;
     /**
      * @var callable
      */
@@ -231,13 +231,18 @@ class Pool
             do {
                 $attempts++;
                 // If pool is empty and size limit not reached, create new connection
-                if ($this->pool->count() === 0 && $this->connectionsCreated < $this->size) {
+                // Use lock to prevent race condition where multiple coroutines create connections simultaneously
+                $shouldCreate = $this->pool->withLock(function () {
+                    return $this->pool->count() === 0 && $this->connectionsCreated < $this->size;
+                }, timeout: self::POP_TIMEOUT_IN_SECONDS);
+
+                if ($shouldCreate) {
                     $connection = $this->createConnection();
                     $this->active[$connection->getID()] = $connection;
                     return $connection;
                 }
 
-                $connection = $this->pool->pop(self::POP_TIMEOUT_IN_SECODNS);
+                $connection = $this->pool->pop(self::POP_TIMEOUT_IN_SECONDS);
 
                 if ($connection === false || $connection === null) {
                     if ($attempts >= $this->getRetryAttempts()) {
@@ -355,8 +360,11 @@ class Pool
     {
         try {
             if ($connection !== null) {
-                $this->connectionsCreated--;
-                unset($this->active[$connection->getID()]);
+                // Synchronize access to shared state
+                $this->pool->withLock(function () use ($connection) {
+                    $this->connectionsCreated--;
+                    unset($this->active[$connection->getID()]);
+                }, timeout: self::POP_TIMEOUT_IN_SECONDS);
 
                 // Create a new connection to maintain pool size
                 if ($this->connectionsCreated < $this->size) {
@@ -367,9 +375,15 @@ class Pool
                 return $this;
             }
 
-            foreach ($this->active as $connection) {
-                $this->connectionsCreated--;
-                unset($this->active[$connection->getID()]);
+            // Get a stable copy of active connections to avoid modifying array during iteration
+            $activeConnections = array_values($this->active);
+
+            foreach ($activeConnections as $conn) {
+                // Synchronize access to shared state
+                $this->pool->withLock(function () use ($conn) {
+                    $this->connectionsCreated--;
+                    unset($this->active[$conn->getID()]);
+                }, timeout: self::POP_TIMEOUT_IN_SECONDS);
 
                 // Create a new connection to maintain pool size
                 if ($this->connectionsCreated < $this->size) {

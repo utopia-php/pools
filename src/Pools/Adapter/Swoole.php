@@ -30,14 +30,17 @@ class Swoole extends Adapter
         return $this;
     }
 
+    /**
+     * Pop an item from the pool.
+     *
+     * @param int $timeout Timeout in seconds. Use 0 for non-blocking pop.
+     * @return mixed|false Returns the pooled value, or false if the pool is empty
+     *                     or the timeout expires.
+     */
     public function pop(int $timeout): mixed
     {
-        $result = $this->pool->pop($timeout);
-
-        // if pool is empty or timeout occured => result will be false
-        return $result;
+        return $this->pool->pop($timeout);
     }
-
 
     public function count(): int
     {
@@ -46,14 +49,19 @@ class Swoole extends Adapter
     }
 
     /**
-     * Executes the callback under a lock and releases it afterward.
-     * @param callable $callback
-     * @param int $timeout
-     * @return mixed
-     */
+     * Executes a callback while holding a lock.
+     *
+     * The lock is acquired before invoking the callback and is always released
+     * afterward, even if the callback throws an exception.
+     *
+     * @param callable $callback Callback to execute within the critical section.
+     * @param int $timeout Maximum time (in seconds) to wait for the lock.
+     * @return mixed The value returned by the callback.
+     *
+     * @throws \RuntimeException If the lock cannot be acquired within the timeout.
+    */
     public function withLock(callable $callback, int $timeout): mixed
     {
-        // Acquire lock for thread-safe operations with timeout to prevent deadlock
         $acquired = $this->lock->lockwait($timeout);
 
         if (!$acquired) {

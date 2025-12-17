@@ -24,8 +24,13 @@ class Stack extends Adapter
     }
 
     /**
-     * @param int $timeout Stack adapter will ignore timeout
-     * @return mixed
+     * Pop an item from the stack.
+     *
+     * Note: The stack adapter does not support blocking operations.
+     * The `$timeout` parameter is ignored.
+     *
+     * @param int $timeout Ignored by the stack adapter.
+     * @return mixed|null Returns the popped item, or null if the stack is empty.
      */
     public function pop(int $timeout): mixed
     {
@@ -38,10 +43,14 @@ class Stack extends Adapter
     }
 
     /**
-     * No lock applied and just the callback is executed
-     * @param callable $callback
-     * @param int $timeout
-     * @return mixed
+     * Executes the callback without acquiring a lock.
+     *
+     * This implementation does not provide mutual exclusion.
+     * The `$timeout` parameter is ignored.
+     *
+     * @param callable $callback Callback to execute.
+     * @param int $timeout Ignored.
+     * @return mixed The value returned by the callback.
      */
     public function withLock(callable $callback, int $timeout): mixed
     {

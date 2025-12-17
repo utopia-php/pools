@@ -419,7 +419,7 @@ class Pool
      */
     public function isEmpty(): bool
     {
-        return $this->pool->count() === 0;
+        return $this->count() === 0;
     }
 
     /**
@@ -440,6 +440,6 @@ class Pool
         $this->telemetryActiveConnections->record($activeConnections, $this->telemetryAttributes);
         $this->telemetryIdleConnections->record($idleConnections, $this->telemetryAttributes);
         $this->telemetryOpenConnections->record($openConnections, $this->telemetryAttributes);
-        $this->telemetryPoolCapacity->record($activeConnections + $this->pool->count(), $this->telemetryAttributes);
+        $this->telemetryPoolCapacity->record($this->connectionsCreated, $this->telemetryAttributes);
     }
 }

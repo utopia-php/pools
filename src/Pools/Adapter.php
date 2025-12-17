@@ -17,7 +17,7 @@ abstract class Adapter
     abstract public function count(): int;
 
     /**
-     * Execute a callback with lock protection
+     * Execute a callback with lock protection if the adapter supports it
      *
      * @param callable $callback
      * @param int $timeout Timeout in seconds

@@ -45,6 +45,12 @@ class Swoole extends Adapter
         return is_int($length) ? $length : 0;
     }
 
+    /**
+     * Executes the callback under a lock and releases it afterward.
+     * @param callable $callback
+     * @param int $timeout
+     * @return mixed
+     */
     public function withLock(callable $callback, int $timeout): mixed
     {
         // Acquire lock for thread-safe operations with timeout to prevent deadlock

@@ -23,6 +23,10 @@ class Stack extends Adapter
         return $this;
     }
 
+    /**
+     * @param int $timeout Stack adapter will ignore timeout
+     * @return mixed
+     */
     public function pop(int $timeout): mixed
     {
         return array_pop($this->pool);
@@ -33,6 +37,12 @@ class Stack extends Adapter
         return count($this->pool);
     }
 
+    /**
+     * No lock applied and just the callback is executed
+     * @param callable $callback
+     * @param int $timeout
+     * @return mixed
+     */
     public function withLock(callable $callback, int $timeout): mixed
     {
         return $callback();

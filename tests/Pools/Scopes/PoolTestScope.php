@@ -341,17 +341,29 @@ trait PoolTestScope
             $this->assertEquals(5, $this->poolObject->count());
 
             $allocate(3, function () use ($telemetry): void {
-                $this->assertEquals([1, 2, 3], $telemetry->gauges['pool.connection.open.count']->values);
-                $this->assertEquals([1, 2, 3], $telemetry->gauges['pool.connection.active.count']->values);
-                $this->assertEquals([0, 0, 0], $telemetry->gauges['pool.connection.idle.count']->values);
+                /** @var object{values: array<int, float|int>} $openGauge */
+                $openGauge = $telemetry->gauges['pool.connection.open.count'];
+                /** @var object{values: array<int, float|int>} $activeGauge */
+                $activeGauge = $telemetry->gauges['pool.connection.active.count'];
+                /** @var object{values: array<int, float|int>} $idleGauge */
+                $idleGauge = $telemetry->gauges['pool.connection.idle.count'];
+                $this->assertEquals([1, 2, 3], $openGauge->values);
+                $this->assertEquals([1, 2, 3], $activeGauge->values);
+                $this->assertEquals([0, 0, 0], $idleGauge->values);
             });
 
             $this->assertEquals(5, $this->poolObject->count());
 
             $allocate(1, function () use ($telemetry): void {
-                $this->assertEquals([1, 2, 3, 3, 3, 3, 3], $telemetry->gauges['pool.connection.open.count']->values);
-                $this->assertEquals([1, 2, 3, 2, 1, 0, 1], $telemetry->gauges['pool.connection.active.count']->values);
-                $this->assertEquals([0, 0, 0, 1, 2, 3, 2], $telemetry->gauges['pool.connection.idle.count']->values);
+                /** @var object{values: array<int, float|int>} $openGauge */
+                $openGauge = $telemetry->gauges['pool.connection.open.count'];
+                /** @var object{values: array<int, float|int>} $activeGauge */
+                $activeGauge = $telemetry->gauges['pool.connection.active.count'];
+                /** @var object{values: array<int, float|int>} $idleGauge */
+                $idleGauge = $telemetry->gauges['pool.connection.idle.count'];
+                $this->assertEquals([1, 2, 3, 3, 3, 3, 3], $openGauge->values);
+                $this->assertEquals([1, 2, 3, 2, 1, 0, 1], $activeGauge->values);
+                $this->assertEquals([0, 0, 0, 1, 2, 3, 2], $idleGauge->values);
             });
         });
     }

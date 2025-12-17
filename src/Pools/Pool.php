@@ -54,7 +54,7 @@ class Pool
     private Gauge $telemetryPoolCapacity;
     private Histogram $telemetryWaitDuration;
     private Histogram $telemetryUseDuration;
-    /** @var array<string, int|string> */
+    /** @var array<non-empty-string, int|string> */
     private array $telemetryAttributes;
 
     /**

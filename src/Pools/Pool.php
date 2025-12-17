@@ -360,15 +360,20 @@ class Pool
     {
         try {
             if ($connection !== null) {
-                // Synchronize access to shared state
-                $this->pool->withLock(function () use ($connection) {
+                // Synchronize access to shared state and replacement connection creation
+                $newConnection = $this->pool->withLock(function () use ($connection) {
                     $this->connectionsCreated--;
                     unset($this->active[$connection->getID()]);
+
+                    // Create a new connection to maintain pool size while holding the lock
+                    if ($this->connectionsCreated < $this->size) {
+                        return $this->createConnection();
+                    }
+                    return null;
                 }, timeout: self::POP_TIMEOUT_IN_SECONDS);
 
-                // Create a new connection to maintain pool size
-                if ($this->connectionsCreated < $this->size) {
-                    $newConnection = $this->createConnection();
+                // Push the new connection to the pool if one was created
+                if ($newConnection !== null) {
                     $this->pool->push($newConnection);
                 }
 
@@ -379,15 +384,20 @@ class Pool
             $activeConnections = array_values($this->active);
 
             foreach ($activeConnections as $conn) {
-                // Synchronize access to shared state
-                $this->pool->withLock(function () use ($conn) {
+                // Synchronize access to shared state and replacement connection creation
+                $newConnection = $this->pool->withLock(function () use ($conn) {
                     $this->connectionsCreated--;
                     unset($this->active[$conn->getID()]);
+
+                    // Create a new connection to maintain pool size while holding the lock
+                    if ($this->connectionsCreated < $this->size) {
+                        return $this->createConnection();
+                    }
+                    return null;
                 }, timeout: self::POP_TIMEOUT_IN_SECONDS);
 
-                // Create a new connection to maintain pool size
-                if ($this->connectionsCreated < $this->size) {
-                    $newConnection = $this->createConnection();
+                // Push the new connection to the pool if one was created
+                if ($newConnection !== null) {
                     $this->pool->push($newConnection);
                 }
             }

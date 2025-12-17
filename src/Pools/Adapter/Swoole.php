@@ -41,7 +41,8 @@ class Swoole extends Adapter
 
     public function count(): int
     {
-        return (int) $this->pool->length();
+        $length = $this->pool->length();
+        return is_int($length) ? $length : 0;
     }
 
     public function withLock(callable $callback, int $timeout): mixed

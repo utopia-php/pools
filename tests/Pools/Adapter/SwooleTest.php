@@ -20,6 +20,7 @@ class SwooleTest extends Base
         $result = null;
         $exception = null;
 
+        /** @phpstan-ignore-next-line */
         Coroutine\run(function () use ($callback, &$result, &$exception): void {
             try {
                 $result = $callback();
@@ -44,6 +45,7 @@ class SwooleTest extends Base
         $errors = [];
         $successCount = 0;
 
+        /** @phpstan-ignore-next-line */
         \Swoole\Coroutine\run(function () use (&$errors, &$successCount) {
             // Create a pool with 5 connections inside coroutine context
             $connectionCounter = 0;
@@ -125,6 +127,7 @@ class SwooleTest extends Base
         $successCount = 0;
         $errorCount = 0;
 
+        /** @phpstan-ignore-next-line */
         \Swoole\Coroutine\run(function () use ($totalRequests, &$successCount, &$errorCount) {
             // Create a pool with 3 connections inside coroutine context
             $connectionCounter = 0;
@@ -184,6 +187,7 @@ class SwooleTest extends Base
         $seenResources = [];
         $duplicateResources = [];
 
+        /** @phpstan-ignore-next-line */
         \Swoole\Coroutine\run(function () use (&$seenResources, &$duplicateResources) {
             // Create a pool with 5 connections inside coroutine context
             $connectionCounter = 0;
@@ -248,6 +252,7 @@ class SwooleTest extends Base
         $connectionIds = [];
         $connectionCounter = 0;
 
+        /** @phpstan-ignore-next-line */
         \Swoole\Coroutine\run(function () use (&$connectionIds, &$connectionCounter) {
             // Create a pool with 3 connections inside coroutine context
             $pool = new Pool(new Swoole(), 'swoole-reuse', 3, function () use (&$connectionCounter) {
@@ -307,6 +312,7 @@ class SwooleTest extends Base
         $errorCount = 0;
         $connectionCounter = 0;
 
+        /** @phpstan-ignore-next-line */
         \Swoole\Coroutine\run(function () use ($totalRequests, &$successCount, &$errorCount, &$connectionCounter) {
             // Create a pool with 10 connections inside coroutine context
             $pool = new Pool(new Swoole(), 'swoole-stress', 10, function () use (&$connectionCounter) {

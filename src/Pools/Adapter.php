@@ -20,7 +20,7 @@ abstract class Adapter
      * Execute a callback with lock protection
      *
      * @param callable $callback
-     * @param float $timeout Timeout in seconds
+     * @param int $timeout Timeout in seconds
      * @return mixed
      */
     abstract public function withLock(callable $callback, int $timeout): mixed;

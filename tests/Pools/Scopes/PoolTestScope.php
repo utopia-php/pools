@@ -131,14 +131,14 @@ trait PoolTestScope
             $this->assertInstanceOf(Connection::class, $connection);
             $this->assertEquals('x', $connection->getResource());
 
-            // Pool should be empty
+            // Pop remaining 4 connections
+            $this->poolObject->pop();
+            $this->poolObject->pop();
+            $this->poolObject->pop();
+            $this->poolObject->pop();
+            // Pool should be empty, next pop should throw
             $this->expectException(Exception::class);
-
-            $this->assertInstanceOf(Connection::class, $this->poolObject->pop());
-            $this->assertInstanceOf(Connection::class, $this->poolObject->pop());
-            $this->assertInstanceOf(Connection::class, $this->poolObject->pop());
-            $this->assertInstanceOf(Connection::class, $this->poolObject->pop());
-            $this->assertInstanceOf(Connection::class, $this->poolObject->pop());
+            $this->poolObject->pop();
         });
     }
 

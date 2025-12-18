@@ -294,7 +294,9 @@ class Pool
                     sleep($this->getRetrySleep());
                 } else {
                     if ($connection instanceof Connection) {
-                        $this->active[$connection->getID()] = $connection;
+                        $this->pool->synchronized(function () use ($connection) {
+                            $this->active[$connection->getID()] = $connection;
+                        }, timeout: $this->getSynchronizationTimeout());
                         return $connection;
                     }
                 }

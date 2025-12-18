@@ -14,7 +14,6 @@ use Utopia\Telemetry\Histogram;
  */
 class Pool
 {
-    public const LOCK_TIMEOUT_IN_SECONDS = 3;
     /**
      * @var callable
      */
@@ -39,6 +38,11 @@ class Pool
      * @var int
      */
     protected int $retrySleep = 1; // seconds
+
+    /**
+     * @var int
+     */
+    protected int $synchronizedTimeout = 3; // seconds
 
     protected PoolAdapter $pool;
 
@@ -72,7 +76,7 @@ class Pool
         $this->init = $init;
         $this->pool = $adapter;
         // Initialize empty channel (no pre-filling for lazy initialization)
-        $this->pool->fill($this->size, null);
+        $this->pool->initialize($this->size);
         $this->setTelemetry(new NoTelemetry());
     }
 
@@ -165,6 +169,27 @@ class Pool
     }
 
     /**
+     * Set the lock timeout for adapters that support synchronized locking.
+     *
+     * Note:
+     * - This setting is applied only if the underlying adapter supports lock timeouts.
+     * - For adapters that do not support locking or lock timeouts, this method is a no-op.
+     *
+     * @param int $timeout Synchronized lock timeout in seconds.
+     * @return $this
+     */
+    public function setSynchronizationTimeout(int $timeout): static
+    {
+        $this->synchronizedTimeout = $timeout;
+        return $this;
+    }
+
+    public function getSynchronizationTimeout(): int
+    {
+        return $this->synchronizedTimeout;
+    }
+
+    /**
      * @param Telemetry $telemetry
      * @return $this<TResource>
      */
@@ -235,30 +260,30 @@ class Pool
                 // Unlock
                 // Create connection (no lock)
                 // On failure: lock + decrement
-                $shouldCreateConnections = $this->pool->withLock(function (): bool {
+                $shouldCreateConnections = $this->pool->synchronized(function (): bool {
                     if ($this->pool->count() === 0 && $this->connectionsCreated < $this->size) {
                         $this->connectionsCreated++;
                         return true;
                     }
                     return false;
-                }, timeout: self::LOCK_TIMEOUT_IN_SECONDS);
+                }, timeout: $this->getSynchronizationTimeout());
 
                 if ($shouldCreateConnections) {
                     try {
                         $connection = $this->createConnection();
-                        $this->pool->withLock(function () use ($connection) {
+                        $this->pool->synchronized(function () use ($connection) {
                             $this->active[$connection->getID()] = $connection;
-                        }, timeout: self::LOCK_TIMEOUT_IN_SECONDS);
+                        }, timeout: $this->getSynchronizationTimeout());
                         return $connection;
                     } catch (\Exception $e) {
-                        $this->pool->withLock(function () {
+                        $this->pool->synchronized(function () {
                             $this->connectionsCreated--;
-                        }, timeout: self::LOCK_TIMEOUT_IN_SECONDS);
+                        }, timeout: $this->getSynchronizationTimeout());
                         throw $e;
                     }
                 }
 
-                $connection = $this->pool->pop(self::LOCK_TIMEOUT_IN_SECONDS);
+                $connection = $this->pool->pop($this->getSynchronizationTimeout());
 
                 if ($connection === false || $connection === null) {
                     if ($attempts >= $this->getRetryAttempts()) {
@@ -371,7 +396,7 @@ class Pool
     private function destroyConnection(?Connection $connection = null): static
     {
         if ($connection !== null) {
-            $shouldCreate = $this->pool->withLock(function () use ($connection) {
+            $shouldCreate = $this->pool->synchronized(function () use ($connection) {
                 $this->connectionsCreated--;
                 unset($this->active[$connection->getID()]);
                 if ($this->connectionsCreated < $this->size) {
@@ -379,15 +404,15 @@ class Pool
                     return true;
                 };
                 return false;
-            }, timeout: self::LOCK_TIMEOUT_IN_SECONDS);
+            }, timeout: $this->getSynchronizationTimeout());
 
             if ($shouldCreate) {
                 try {
                     $this->pool->push($this->createConnection());
                 } catch (Exception $e) {
-                    $this->pool->withLock(function () {
+                    $this->pool->synchronized(function () {
                         $this->connectionsCreated--;
-                    }, timeout: self::LOCK_TIMEOUT_IN_SECONDS);
+                    }, timeout: $this->getSynchronizationTimeout());
                     throw $e;
                 }
             }
@@ -396,7 +421,7 @@ class Pool
         }
         $activeConnections = array_values($this->active);
         foreach ($activeConnections as $conn) {
-            $this->destroy($conn);
+            $this->destroyConnection($conn);
         }
         return $this;
     }

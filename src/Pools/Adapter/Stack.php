@@ -9,9 +9,18 @@ class Stack extends Adapter
     /** @var array<mixed> $pool */
     protected array $pool = [];
 
-    public function fill(int $size, mixed $value): static
+    /**
+     * Initialize the stack-based pool.
+     *
+     * Note:
+     * - `$size` is accepted for API compatibility with other pool adapters.
+     * - The stack adapter does NOT enforce capacity limits.
+     * - `$size` is ignored because the pool is backed by a simple array.
+     *
+     * @param int $size Ignored by the stack adapter.
+     */
+    public function initialize(int $size): static
     {
-        // Initialize empty pool (no pre-filling)
         $this->pool = [];
         return $this;
     }
@@ -52,7 +61,7 @@ class Stack extends Adapter
      * @param int $timeout Ignored.
      * @return mixed The value returned by the callback.
      */
-    public function withLock(callable $callback, int $timeout): mixed
+    public function synchronized(callable $callback, int $timeout): mixed
     {
         return $callback();
     }

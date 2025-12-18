@@ -12,12 +12,10 @@ class Swoole extends Adapter
 
     /** @var Lock $lock */
     protected Lock $lock;
-    public function fill(int $size, mixed $value): static
+    public function initialize(int $size): static
     {
-        // Create empty channel with capacity (no pre-filling)
         $this->pool = new Channel($size);
 
-        // Initialize lock for thread-safe operations
         $this->lock = new Lock(SWOOLE_MUTEX);
 
         return $this;
@@ -60,7 +58,7 @@ class Swoole extends Adapter
      *
      * @throws \RuntimeException If the lock cannot be acquired within the timeout.
     */
-    public function withLock(callable $callback, int $timeout): mixed
+    public function synchronized(callable $callback, int $timeout): mixed
     {
         $acquired = $this->lock->lockwait($timeout);
 

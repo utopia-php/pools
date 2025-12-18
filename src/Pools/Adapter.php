@@ -4,7 +4,7 @@ namespace Utopia\Pools;
 
 abstract class Adapter
 {
-    abstract public function fill(int $size, mixed $value): static;
+    abstract public function initialize(int $size): static;
 
     abstract public function push(mixed $connection): static;
 
@@ -23,5 +23,5 @@ abstract class Adapter
      * @param int $timeout Timeout in seconds
      * @return mixed
      */
-    abstract public function withLock(callable $callback, int $timeout): mixed;
+    abstract public function synchronized(callable $callback, int $timeout): mixed;
 }

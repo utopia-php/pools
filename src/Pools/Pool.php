@@ -219,21 +219,37 @@ class Pool
      *
      * @template T
      * @param callable(TResource): T $callback Function that receives the connection resource
+     * @param int $retries Number of retry attempts if the callback fails (default: 0)
      * @return T Return value from the callback
+     * @throws \Throwable If all retry attempts fail, throws the last exception
      */
-    public function use(callable $callback): mixed
+    public function use(callable $callback, int $retries = 0): mixed
     {
-        $start = microtime(true);
-        $connection = null;
-        try {
-            $connection = $this->pop();
-            return $callback($connection->getResource());
-        } finally {
-            if ($connection !== null) {
-                $this->telemetryUseDuration->record(microtime(true) - $start, $this->telemetryAttributes);
+        $lastException = null;
+        
+        for ($attempt = 0; $attempt <= $retries; $attempt++) {
+            $start = microtime(true);
+            $connection = null;
+            
+            try {
+                $connection = $this->pop();
+                $result = $callback($connection->getResource());
                 $this->reclaim($connection);
+                $this->telemetryUseDuration->record(microtime(true) - $start, $this->telemetryAttributes);
+                return $result;
+            } catch (\Throwable $e) {
+                if ($connection !== null) {
+                    $this->destroy($connection);
+                }
+                $this->telemetryUseDuration->record(microtime(true) - $start, $this->telemetryAttributes);
+                $lastException = $e;
+                if ($attempt === $retries) {
+                    throw $lastException;
+                }
             }
         }
+
+        throw $lastException;
     }
 
     /**

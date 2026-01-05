@@ -380,18 +380,18 @@ trait PoolTestScope
             $attempts = 0;
             $result = $pool->use(function ($resource) use (&$attempts) {
                 $attempts++;
-
+                
                 // Fail on first two attempts, succeed on third
                 if ($attempts < 3) {
                     throw new Exception("Simulated connection failure");
                 }
-
+                
                 return "success: {$resource}";
             }, 3); // Allow up to 3 retries (4 total attempts)
 
             $this->assertEquals(3, $attempts);
             $this->assertEquals("success: connection-3", $result);
-
+            
             // Pool should have connections available (destroyed failed ones, created new)
             $this->assertGreaterThan(0, $pool->count());
         });
@@ -400,15 +400,15 @@ trait PoolTestScope
             $pool = new Pool($this->getAdapter(), 'testIntermittent', 5, fn () => 'resource');
 
             $callCount = 0;
-
+            
             $result = $pool->use(function ($resource) use (&$callCount) {
                 $callCount++;
-
+                
                 // Fail on odd attempts, succeed on even
                 if ($callCount % 2 === 1) {
                     throw new Exception("Odd attempt failure");
                 }
-
+                
                 return "success on attempt {$callCount}";
             }, 5); // Allow 5 retries
 
@@ -423,12 +423,14 @@ trait PoolTestScope
             $pool = new Pool($this->getAdapter(), 'testRetryFail', 3, fn () => 'x');
 
             $attempts = 0;
-
+            
             try {
                 $pool->use(function ($resource) use (&$attempts) {
                     $attempts++;
                     throw new Exception("Persistent failure");
                 }, 2); // Allow up to 2 retries (3 total attempts)
+                
+                $this->fail('Expected exception was not thrown');
             } catch (Exception $e) {
                 $this->assertEquals("Persistent failure", $e->getMessage());
                 $this->assertEquals(3, $attempts); // Should have tried 3 times (initial + 2 retries)
@@ -442,12 +444,14 @@ trait PoolTestScope
             $pool = new Pool($this->getAdapter(), 'testNoRetry', 2, fn () => 'x');
 
             $attempts = 0;
-
+            
             try {
                 $pool->use(function ($resource) use (&$attempts) {
                     $attempts++;
                     throw new Exception("First attempt failure");
                 }); // No retries (default)
+                
+                $this->fail('Expected exception was not thrown');
             } catch (Exception $e) {
                 $this->assertEquals("First attempt failure", $e->getMessage());
                 $this->assertEquals(1, $attempts); // Should only try once
@@ -466,23 +470,23 @@ trait PoolTestScope
 
             $attempts = 0;
             $seenResources = [];
-
+            
             $pool->use(function ($resource) use (&$attempts, &$seenResources) {
                 $attempts++;
                 $seenResources[] = $resource;
-
+                
                 // Fail twice, succeed on third
                 if ($attempts < 3) {
                     throw new Exception("Connection failed");
                 }
-
+                
                 return "success";
             }, 3);
 
             // Should have created 3 connections (one for each attempt)
             $this->assertEquals(3, $i);
             $this->assertEquals(3, $attempts);
-
+            
             // Each attempt should have gotten a different connection (failed ones were destroyed)
             $this->assertCount(3, array_unique($seenResources));
             $this->assertEquals(['connection-1', 'connection-2', 'connection-3'], $seenResources);

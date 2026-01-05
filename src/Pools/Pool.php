@@ -3,7 +3,6 @@
 namespace Utopia\Pools;
 
 use Exception;
-use Throwable;
 use Utopia\Pools\Adapter as PoolAdapter;
 use Utopia\Telemetry\Adapter as Telemetry;
 use Utopia\Telemetry\Adapter\None as NoTelemetry;
@@ -226,15 +225,12 @@ class Pool
      */
     public function use(callable $callback, int $retries = 0): mixed
     {
-        /**
-         * @var Throwable $lastException
-         */
         $lastException = null;
-
+        
         for ($attempt = 0; $attempt <= $retries; $attempt++) {
             $start = microtime(true);
             $connection = null;
-
+            
             try {
                 $connection = $this->pop();
                 $result = $callback($connection->getResource());

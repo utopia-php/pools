@@ -52,39 +52,39 @@ class GroupTest extends TestCase
     {
         $this->object->add(new Pool('test', 5, fn () => 'x'));
 
-        $this->assertEquals(5, $this->object->get('test')->count());
+        $this->assertSame(5, $this->object->get('test')->count());
 
         $this->object->get('test')->pop();
         $this->object->get('test')->pop();
         $this->object->get('test')->pop();
 
-        $this->assertEquals(2, $this->object->get('test')->count());
+        $this->assertSame(2, $this->object->get('test')->count());
 
         $this->object->reclaim();
 
-        $this->assertEquals(5, $this->object->get('test')->count());
+        $this->assertSame(5, $this->object->get('test')->count());
     }
 
     public function testReconnectAttempts(): void
     {
         $this->object->add(new Pool('test', 5, fn () => 'x'));
 
-        $this->assertEquals(3, $this->object->get('test')->getReconnectAttempts());
+        $this->assertSame(3, $this->object->get('test')->getReconnectAttempts());
 
         $this->object->setReconnectAttempts(5);
 
-        $this->assertEquals(5, $this->object->get('test')->getReconnectAttempts());
+        $this->assertSame(5, $this->object->get('test')->getReconnectAttempts());
     }
 
     public function testReconnectSleep(): void
     {
         $this->object->add(new Pool('test', 5, fn () => 'x'));
 
-        $this->assertEquals(1, $this->object->get('test')->getReconnectSleep());
+        $this->assertSame(1, $this->object->get('test')->getReconnectSleep());
 
         $this->object->setReconnectSleep(2);
 
-        $this->assertEquals(2, $this->object->get('test')->getReconnectSleep());
+        $this->assertSame(2, $this->object->get('test')->getReconnectSleep());
     }
 
     public function testUse(): void
@@ -97,22 +97,22 @@ class GroupTest extends TestCase
         $this->object->add($pool2);
         $this->object->add($pool3);
 
-        $this->assertEquals(1, $pool1->count());
-        $this->assertEquals(1, $pool2->count());
-        $this->assertEquals(1, $pool3->count());
+        $this->assertSame(1, $pool1->count());
+        $this->assertSame(1, $pool2->count());
+        $this->assertSame(1, $pool3->count());
 
         // @phpstan-ignore argument.type
         $this->object->use(['pool1', 'pool3'], function ($one, $three) use ($pool1, $pool2, $pool3): void {
-            $this->assertEquals('1', $one);
-            $this->assertEquals('3', $three);
+            $this->assertSame('1', $one);
+            $this->assertSame('3', $three);
 
-            $this->assertEquals(0, $pool1->count());
-            $this->assertEquals(1, $pool2->count());
-            $this->assertEquals(0, $pool3->count());
+            $this->assertSame(0, $pool1->count());
+            $this->assertSame(1, $pool2->count());
+            $this->assertSame(0, $pool3->count());
         });
 
-        $this->assertEquals(1, $pool1->count());
-        $this->assertEquals(1, $pool2->count());
-        $this->assertEquals(1, $pool3->count());
+        $this->assertSame(1, $pool1->count());
+        $this->assertSame(1, $pool2->count());
+        $this->assertSame(1, $pool3->count());
     }
 }

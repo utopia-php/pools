@@ -23,80 +23,80 @@ class PoolTest extends TestCase
 
     public function testGetName(): void
     {
-        $this->assertEquals('test', $this->object->getName());
+        $this->assertSame('test', $this->object->getName());
     }
 
     public function testGetSize(): void
     {
-        $this->assertEquals(5, $this->object->getSize());
+        $this->assertSame(5, $this->object->getSize());
     }
 
     public function testGetReconnectAttempts(): void
     {
-        $this->assertEquals(3, $this->object->getReconnectAttempts());
+        $this->assertSame(3, $this->object->getReconnectAttempts());
     }
 
     public function testSetReconnectAttempts(): void
     {
-        $this->assertEquals(3, $this->object->getReconnectAttempts());
+        $this->assertSame(3, $this->object->getReconnectAttempts());
 
         $this->object->setReconnectAttempts(20);
 
-        $this->assertEquals(20, $this->object->getReconnectAttempts());
+        $this->assertSame(20, $this->object->getReconnectAttempts());
     }
 
     public function testGetReconnectSleep(): void
     {
-        $this->assertEquals(1, $this->object->getReconnectSleep());
+        $this->assertSame(1, $this->object->getReconnectSleep());
     }
 
     public function testSetReconnectSleep(): void
     {
-        $this->assertEquals(1, $this->object->getReconnectSleep());
+        $this->assertSame(1, $this->object->getReconnectSleep());
 
         $this->object->setReconnectSleep(20);
 
-        $this->assertEquals(20, $this->object->getReconnectSleep());
+        $this->assertSame(20, $this->object->getReconnectSleep());
     }
 
     public function testGetRetryAttempts(): void
     {
-        $this->assertEquals(3, $this->object->getRetryAttempts());
+        $this->assertSame(3, $this->object->getRetryAttempts());
     }
 
     public function testSetRetryAttempts(): void
     {
-        $this->assertEquals(3, $this->object->getRetryAttempts());
+        $this->assertSame(3, $this->object->getRetryAttempts());
 
         $this->object->setRetryAttempts(20);
 
-        $this->assertEquals(20, $this->object->getRetryAttempts());
+        $this->assertSame(20, $this->object->getRetryAttempts());
     }
 
     public function testGetRetrySleep(): void
     {
-        $this->assertEquals(1, $this->object->getRetrySleep());
+        $this->assertSame(1, $this->object->getRetrySleep());
     }
 
     public function testSetRetrySleep(): void
     {
-        $this->assertEquals(1, $this->object->getRetrySleep());
+        $this->assertSame(1, $this->object->getRetrySleep());
 
         $this->object->setRetrySleep(20);
 
-        $this->assertEquals(20, $this->object->getRetrySleep());
+        $this->assertSame(20, $this->object->getRetrySleep());
     }
 
     public function testPop(): void
     {
-        $this->assertEquals(5, $this->object->count());
+        $this->assertSame(5, $this->object->count());
 
         $connection = $this->object->pop();
 
-        $this->assertEquals(4, $this->object->count());
+        $this->assertSame(4, $this->object->count());
 
         $this->assertInstanceOf(Connection::class, $connection);
-        $this->assertEquals('x', $connection->getResource());
+        $this->assertSame('x', $connection->getResource());
 
         // Pool should be empty
         $this->expectException(Exception::class);
@@ -110,57 +110,57 @@ class PoolTest extends TestCase
 
     public function testUse(): void
     {
-        $this->assertEquals(5, $this->object->count());
+        $this->assertSame(5, $this->object->count());
         $this->object->use(function ($resource): void {
-            $this->assertEquals(4, $this->object->count());
-            $this->assertEquals('x', $resource);
+            $this->assertSame(4, $this->object->count());
+            $this->assertSame('x', $resource);
         });
 
-        $this->assertEquals(5, $this->object->count());
+        $this->assertSame(5, $this->object->count());
     }
 
     public function testPush(): void
     {
-        $this->assertEquals(5, $this->object->count());
+        $this->assertSame(5, $this->object->count());
 
         $connection = $this->object->pop();
 
-        $this->assertEquals(4, $this->object->count());
+        $this->assertSame(4, $this->object->count());
 
         $this->assertInstanceOf(Connection::class, $connection);
-        $this->assertEquals('x', $connection->getResource());
+        $this->assertSame('x', $connection->getResource());
 
         $this->assertInstanceOf(Pool::class, $this->object->push($connection));
 
-        $this->assertEquals(5, $this->object->count());
+        $this->assertSame(5, $this->object->count());
     }
 
     public function testCount(): void
     {
-        $this->assertEquals(5, $this->object->count());
+        $this->assertSame(5, $this->object->count());
 
         $connection = $this->object->pop();
 
-        $this->assertEquals(4, $this->object->count());
+        $this->assertSame(4, $this->object->count());
 
         $this->object->push($connection);
 
-        $this->assertEquals(5, $this->object->count());
+        $this->assertSame(5, $this->object->count());
     }
 
     public function testReclaim(): void
     {
-        $this->assertEquals(5, $this->object->count());
+        $this->assertSame(5, $this->object->count());
 
         $this->object->pop();
         $this->object->pop();
         $this->object->pop();
 
-        $this->assertEquals(2, $this->object->count());
+        $this->assertSame(2, $this->object->count());
 
         $this->object->reclaim();
 
-        $this->assertEquals(5, $this->object->count());
+        $this->assertSame(5, $this->object->count());
     }
 
     public function testIsEmpty(): void
@@ -171,20 +171,20 @@ class PoolTest extends TestCase
         $this->object->pop();
         $this->object->pop();
 
-        $this->assertEquals(true, $this->object->isEmpty());
+        $this->assertSame(true, $this->object->isEmpty());
     }
 
     public function testIsFull(): void
     {
-        $this->assertEquals(true, $this->object->isFull());
+        $this->assertSame(true, $this->object->isFull());
 
         $connection = $this->object->pop();
 
-        $this->assertEquals(false, $this->object->isFull());
+        $this->assertSame(false, $this->object->isFull());
 
         $this->object->push($connection);
 
-        $this->assertEquals(true, $this->object->isFull());
+        $this->assertSame(true, $this->object->isFull());
 
         $this->object->pop();
         $this->object->pop();
@@ -192,11 +192,11 @@ class PoolTest extends TestCase
         $this->object->pop();
         $this->object->pop();
 
-        $this->assertEquals(false, $this->object->isFull());
+        $this->assertSame(false, $this->object->isFull());
 
         $this->object->reclaim();
 
-        $this->assertEquals(true, $this->object->isFull());
+        $this->assertSame(true, $this->object->isFull());
 
         $this->object->pop();
         $this->object->pop();
@@ -204,7 +204,7 @@ class PoolTest extends TestCase
         $this->object->pop();
         $this->object->pop();
 
-        $this->assertEquals(false, $this->object->isFull());
+        $this->assertSame(false, $this->object->isFull());
     }
 
     public function testRetry(): void
@@ -238,27 +238,27 @@ class PoolTest extends TestCase
             return $i <= 2 ? 'x' : 'y';
         });
 
-        $this->assertEquals(2, $object->count());
+        $this->assertSame(2, $object->count());
 
         $connection1 = $object->pop();
         $connection2 = $object->pop();
 
-        $this->assertEquals(0, $object->count());
+        $this->assertSame(0, $object->count());
 
-        $this->assertEquals('x', $connection1->getResource());
-        $this->assertEquals('x', $connection2->getResource());
+        $this->assertSame('x', $connection1->getResource());
+        $this->assertSame('x', $connection2->getResource());
 
         $object->destroy();
 
-        $this->assertEquals(2, $object->count());
+        $this->assertSame(2, $object->count());
 
         $connection1 = $object->pop();
         $connection2 = $object->pop();
 
-        $this->assertEquals(0, $object->count());
+        $this->assertSame(0, $object->count());
 
-        $this->assertEquals('y', $connection1->getResource());
-        $this->assertEquals('y', $connection2->getResource());
+        $this->assertSame('y', $connection1->getResource());
+        $this->assertSame('y', $connection2->getResource());
     }
 
     public function testTelemetry(): void
@@ -279,7 +279,7 @@ class PoolTest extends TestCase
             }
         };
 
-        $this->assertEquals(5, $this->object->count());
+        $this->assertSame(5, $this->object->count());
 
         $allocate(3, function () use ($telemetry): void {
             /** @var object{values: array<int, float|int>} $openGauge */
@@ -293,7 +293,7 @@ class PoolTest extends TestCase
             $this->assertEquals([0, 0, 0], $idleGauge->values);
         });
 
-        $this->assertEquals(5, $this->object->count());
+        $this->assertSame(5, $this->object->count());
 
         $allocate(1, function () use ($telemetry): void {
             /** @var object{values: array<int, float|int>} $openGauge */

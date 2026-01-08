@@ -38,10 +38,6 @@ class SwooleTest extends Base
 
     public function testSwooleCoroutineRaceCondition(): void
     {
-        if (!\extension_loaded('swoole')) {
-            $this->markTestSkipped('Swoole extension is not loaded');
-        }
-
         $errors = [];
         $successCount = 0;
 

@@ -25,7 +25,7 @@ trait ConnectionTestScope
     {
         $this->execute(function (): void {
             $this->setUpConnection();
-            $this->assertSame(null, $this->connectionObject->getID());
+            $this->assertSame('', $this->connectionObject->getID());
 
             $this->connectionObject->setID('test');
 
@@ -37,7 +37,7 @@ trait ConnectionTestScope
     {
         $this->execute(function (): void {
             $this->setUpConnection();
-            $this->assertSame(null, $this->connectionObject->getID());
+            $this->assertSame('', $this->connectionObject->getID());
 
             $this->assertInstanceOf(Connection::class, $this->connectionObject->setID('test'));
 

@@ -101,23 +101,23 @@ trait ConnectionTestScope
         $this->execute(function (): void {
             $pool = new Pool($this->getAdapter(), 'test', 2, fn () => 'x');
 
-            $this->assertEquals(2, $pool->count());
+            $this->assertSame(2, $pool->count());
 
             $connection1 = $pool->pop();
 
-            $this->assertEquals(1, $pool->count());
+            $this->assertSame(1, $pool->count());
 
             $connection2 = $pool->pop();
 
-            $this->assertEquals(0, $pool->count());
+            $this->assertSame(0, $pool->count());
 
             $this->assertInstanceOf(Pool::class, $connection1->reclaim());
 
-            $this->assertEquals(1, $pool->count());
+            $this->assertSame(1, $pool->count());
 
             $this->assertInstanceOf(Pool::class, $connection2->reclaim());
 
-            $this->assertEquals(2, $pool->count());
+            $this->assertSame(2, $pool->count());
         });
     }
 
@@ -139,28 +139,28 @@ trait ConnectionTestScope
                 return $i <= 2 ? 'x' : 'y';
             });
 
-            $this->assertEquals(2, $object->count());
+            $this->assertSame(2, $object->count());
 
             $connection1 = $object->pop();
             $connection2 = $object->pop();
 
-            $this->assertEquals(0, $object->count());
+            $this->assertSame(0, $object->count());
 
-            $this->assertEquals('x', $connection1->getResource());
-            $this->assertEquals('x', $connection2->getResource());
+            $this->assertSame('x', $connection1->getResource());
+            $this->assertSame('x', $connection2->getResource());
 
             $connection1->destroy();
             $connection2->destroy();
 
-            $this->assertEquals(2, $object->count());
+            $this->assertSame(2, $object->count());
 
             $connection1 = $object->pop();
             $connection2 = $object->pop();
 
-            $this->assertEquals(0, $object->count());
+            $this->assertSame(0, $object->count());
 
-            $this->assertEquals('y', $connection1->getResource());
-            $this->assertEquals('y', $connection2->getResource());
+            $this->assertSame('y', $connection1->getResource());
+            $this->assertSame('y', $connection2->getResource());
         });
     }
 }

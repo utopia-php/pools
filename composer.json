@@ -30,12 +30,14 @@
     "require-dev": {
         "phpunit/phpunit": "11.*",
         "laravel/pint": "1.*",
-        "phpstan/phpstan": "1.*"
+        "phpstan/phpstan": "1.*",
+        "swoole/ide-helper": "5.1.2"
     },
     "suggests": {
         "ext-mongodb": "Needed to support MongoDB database pools",
         "ext-redis": "Needed to support Redis cache pools",
-        "ext-pdo": "Needed to support MariaDB, MySQL or SQLite database pools"
+        "ext-pdo": "Needed to support MariaDB, MySQL or SQLite database pools",
+        "ext-swoole" : "Needed to support Swoole based pool adapter"
     },
     "config": {
         "platform": {

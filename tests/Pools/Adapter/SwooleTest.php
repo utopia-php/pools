@@ -103,13 +103,13 @@ class SwooleTest extends Base
 
             // Assertions inside coroutine context
             $this->assertEmpty($errors, 'Errors occurred: ' . implode(', ', $errors));
-            $this->assertEquals(10, $successCount, 'All 10 coroutines should successfully complete');
+            $this->assertSame(10, $successCount, 'All 10 coroutines should successfully complete');
 
             // Pool should be full again after all connections are reclaimed
-            $this->assertEquals(5, $pool->count(), 'Pool should have all 5 connections back');
+            $this->assertSame(5, $pool->count(), 'Pool should have all 5 connections back');
 
             // Should only create exactly pool size connections (no race conditions with new implementation)
-            $this->assertEquals(5, $connectionCounter, 'Should create exactly 5 connections (pool size)');
+            $this->assertSame(5, $connectionCounter, 'Should create exactly 5 connections (pool size)');
         });
     }
 
@@ -163,14 +163,14 @@ class SwooleTest extends Base
             }
 
             // All requests should succeed with proper retry logic
-            $this->assertEquals($totalRequests, $successCount, "All {$totalRequests} requests should succeed");
-            $this->assertEquals(0, $errorCount, 'No errors should occur with proper concurrency handling');
+            $this->assertSame($totalRequests, $successCount, "All {$totalRequests} requests should succeed");
+            $this->assertSame(0, $errorCount, 'No errors should occur with proper concurrency handling');
 
             // Pool should be full again
-            $this->assertEquals(3, $pool->count(), 'Pool should have all 3 connections back');
+            $this->assertSame(3, $pool->count(), 'Pool should have all 3 connections back');
 
             // Should only create 3 connections (pool size)
-            $this->assertEquals(3, $connectionCounter, 'Should only create 3 connections (pool size)');
+            $this->assertSame(3, $connectionCounter, 'Should only create 3 connections (pool size)');
         });
     }
 
@@ -286,14 +286,14 @@ class SwooleTest extends Base
             }
 
             // Assertions inside coroutine context
-            $this->assertEquals(3, $connectionCounter, 'Should only create 3 connections total');
+            $this->assertSame(3, $connectionCounter, 'Should only create 3 connections total');
             $this->assertCount(3, $connectionIds['first'], 'First wave should have 3 connections');
             $this->assertCount(3, $connectionIds['second'], 'Second wave should have 3 connections');
 
             // Second wave should reuse connections from first wave
             sort($connectionIds['first']);
             sort($connectionIds['second']);
-            $this->assertEquals($connectionIds['first'], $connectionIds['second'], 'Second wave should reuse same connection IDs');
+            $this->assertSame($connectionIds['first'], $connectionIds['second'], 'Second wave should reuse same connection IDs');
         });
     }
 
@@ -347,10 +347,10 @@ class SwooleTest extends Base
             }
 
             // Assertions inside coroutine context
-            $this->assertEquals($totalRequests, $successCount, "All {$totalRequests} requests should succeed");
-            $this->assertEquals(0, $errorCount, 'No errors should occur');
-            $this->assertEquals(10, $connectionCounter, 'Should create exactly 10 connections (pool size)');
-            $this->assertEquals(10, $pool->count(), 'Pool should have all connections back');
+            $this->assertSame($totalRequests, $successCount, "All {$totalRequests} requests should succeed");
+            $this->assertSame(0, $errorCount, 'No errors should occur');
+            $this->assertSame(10, $connectionCounter, 'Should create exactly 10 connections (pool size)');
+            $this->assertSame(10, $pool->count(), 'Pool should have all connections back');
         });
     }
 }

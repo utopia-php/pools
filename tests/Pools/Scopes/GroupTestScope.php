@@ -64,17 +64,17 @@ trait GroupTestScope
             $this->setUpGroup();
             $this->groupObject->add(new Pool($this->getAdapter(), 'test', 5, fn () => 'x'));
 
-            $this->assertEquals(5, $this->groupObject->get('test')->count());
+            $this->assertSame(5, $this->groupObject->get('test')->count());
 
             $this->groupObject->get('test')->pop();
             $this->groupObject->get('test')->pop();
             $this->groupObject->get('test')->pop();
 
-            $this->assertEquals(2, $this->groupObject->get('test')->count());
+            $this->assertSame(2, $this->groupObject->get('test')->count());
 
             $this->groupObject->reclaim();
 
-            $this->assertEquals(5, $this->groupObject->get('test')->count());
+            $this->assertSame(5, $this->groupObject->get('test')->count());
         });
     }
 
@@ -84,11 +84,11 @@ trait GroupTestScope
             $this->setUpGroup();
             $this->groupObject->add(new Pool($this->getAdapter(), 'test', 5, fn () => 'x'));
 
-            $this->assertEquals(3, $this->groupObject->get('test')->getReconnectAttempts());
+            $this->assertSame(3, $this->groupObject->get('test')->getReconnectAttempts());
 
             $this->groupObject->setReconnectAttempts(5);
 
-            $this->assertEquals(5, $this->groupObject->get('test')->getReconnectAttempts());
+            $this->assertSame(5, $this->groupObject->get('test')->getReconnectAttempts());
         });
     }
 
@@ -98,11 +98,11 @@ trait GroupTestScope
             $this->setUpGroup();
             $this->groupObject->add(new Pool($this->getAdapter(), 'test', 5, fn () => 'x'));
 
-            $this->assertEquals(1, $this->groupObject->get('test')->getReconnectSleep());
+            $this->assertSame(1, $this->groupObject->get('test')->getReconnectSleep());
 
             $this->groupObject->setReconnectSleep(2);
 
-            $this->assertEquals(2, $this->groupObject->get('test')->getReconnectSleep());
+            $this->assertSame(2, $this->groupObject->get('test')->getReconnectSleep());
         });
     }
 
@@ -118,23 +118,23 @@ trait GroupTestScope
             $this->groupObject->add($pool2);
             $this->groupObject->add($pool3);
 
-            $this->assertEquals(1, $pool1->count());
-            $this->assertEquals(1, $pool2->count());
-            $this->assertEquals(1, $pool3->count());
+            $this->assertSame(1, $pool1->count());
+            $this->assertSame(1, $pool2->count());
+            $this->assertSame(1, $pool3->count());
 
             // @phpstan-ignore argument.type
             $this->groupObject->use(['pool1', 'pool3'], function ($one, $three) use ($pool1, $pool2, $pool3): void {
-                $this->assertEquals('1', $one);
-                $this->assertEquals('3', $three);
+                $this->assertSame('1', $one);
+                $this->assertSame('3', $three);
 
-                $this->assertEquals(0, $pool1->count());
-                $this->assertEquals(1, $pool2->count());
-                $this->assertEquals(0, $pool3->count());
+                $this->assertSame(0, $pool1->count());
+                $this->assertSame(1, $pool2->count());
+                $this->assertSame(0, $pool3->count());
             });
 
-            $this->assertEquals(1, $pool1->count());
-            $this->assertEquals(1, $pool2->count());
-            $this->assertEquals(1, $pool3->count());
+            $this->assertSame(1, $pool1->count());
+            $this->assertSame(1, $pool2->count());
+            $this->assertSame(1, $pool3->count());
         });
     }
 }

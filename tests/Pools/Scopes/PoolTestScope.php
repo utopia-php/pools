@@ -26,7 +26,7 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals('test', $this->poolObject->getName());
+            $this->assertSame('test', $this->poolObject->getName());
         });
     }
 
@@ -34,7 +34,7 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals(5, $this->poolObject->getSize());
+            $this->assertSame(5, $this->poolObject->getSize());
         });
     }
 
@@ -42,7 +42,7 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals(3, $this->poolObject->getReconnectAttempts());
+            $this->assertSame(3, $this->poolObject->getReconnectAttempts());
         });
     }
 
@@ -50,11 +50,11 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals(3, $this->poolObject->getReconnectAttempts());
+            $this->assertSame(3, $this->poolObject->getReconnectAttempts());
 
             $this->poolObject->setReconnectAttempts(20);
 
-            $this->assertEquals(20, $this->poolObject->getReconnectAttempts());
+            $this->assertSame(20, $this->poolObject->getReconnectAttempts());
         });
     }
 
@@ -62,7 +62,7 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals(1, $this->poolObject->getReconnectSleep());
+            $this->assertSame(1, $this->poolObject->getReconnectSleep());
         });
     }
 
@@ -70,11 +70,11 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals(1, $this->poolObject->getReconnectSleep());
+            $this->assertSame(1, $this->poolObject->getReconnectSleep());
 
             $this->poolObject->setReconnectSleep(20);
 
-            $this->assertEquals(20, $this->poolObject->getReconnectSleep());
+            $this->assertSame(20, $this->poolObject->getReconnectSleep());
         });
     }
 
@@ -82,7 +82,7 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals(3, $this->poolObject->getRetryAttempts());
+            $this->assertSame(3, $this->poolObject->getRetryAttempts());
         });
     }
 
@@ -90,11 +90,11 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals(3, $this->poolObject->getRetryAttempts());
+            $this->assertSame(3, $this->poolObject->getRetryAttempts());
 
             $this->poolObject->setRetryAttempts(20);
 
-            $this->assertEquals(20, $this->poolObject->getRetryAttempts());
+            $this->assertSame(20, $this->poolObject->getRetryAttempts());
         });
     }
 
@@ -102,7 +102,7 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals(1, $this->poolObject->getRetrySleep());
+            $this->assertSame(1, $this->poolObject->getRetrySleep());
         });
     }
 
@@ -110,11 +110,11 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals(1, $this->poolObject->getRetrySleep());
+            $this->assertSame(1, $this->poolObject->getRetrySleep());
 
             $this->poolObject->setRetrySleep(20);
 
-            $this->assertEquals(20, $this->poolObject->getRetrySleep());
+            $this->assertSame(20, $this->poolObject->getRetrySleep());
         });
     }
 
@@ -122,14 +122,14 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals(5, $this->poolObject->count());
+            $this->assertSame(5, $this->poolObject->count());
 
             $connection = $this->poolObject->pop();
 
-            $this->assertEquals(4, $this->poolObject->count());
+            $this->assertSame(4, $this->poolObject->count());
 
             $this->assertInstanceOf(Connection::class, $connection);
-            $this->assertEquals('x', $connection->getResource());
+            $this->assertSame('x', $connection->getResource());
 
             // Pop remaining 4 connections
             $this->poolObject->pop();
@@ -146,13 +146,13 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals(5, $this->poolObject->count());
+            $this->assertSame(5, $this->poolObject->count());
             $this->poolObject->use(function ($resource): void {
-                $this->assertEquals(4, $this->poolObject->count());
-                $this->assertEquals('x', $resource);
+                $this->assertSame(4, $this->poolObject->count());
+                $this->assertSame('x', $resource);
             });
 
-            $this->assertEquals(5, $this->poolObject->count());
+            $this->assertSame(5, $this->poolObject->count());
         });
     }
 
@@ -160,18 +160,18 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals(5, $this->poolObject->count());
+            $this->assertSame(5, $this->poolObject->count());
 
             $connection = $this->poolObject->pop();
 
-            $this->assertEquals(4, $this->poolObject->count());
+            $this->assertSame(4, $this->poolObject->count());
 
             $this->assertInstanceOf(Connection::class, $connection);
-            $this->assertEquals('x', $connection->getResource());
+            $this->assertSame('x', $connection->getResource());
 
             $this->assertInstanceOf(Pool::class, $this->poolObject->push($connection));
 
-            $this->assertEquals(5, $this->poolObject->count());
+            $this->assertSame(5, $this->poolObject->count());
         });
     }
 
@@ -179,15 +179,15 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals(5, $this->poolObject->count());
+            $this->assertSame(5, $this->poolObject->count());
 
             $connection = $this->poolObject->pop();
 
-            $this->assertEquals(4, $this->poolObject->count());
+            $this->assertSame(4, $this->poolObject->count());
 
             $this->poolObject->push($connection);
 
-            $this->assertEquals(5, $this->poolObject->count());
+            $this->assertSame(5, $this->poolObject->count());
         });
     }
 
@@ -195,17 +195,17 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals(5, $this->poolObject->count());
+            $this->assertSame(5, $this->poolObject->count());
 
             $this->poolObject->pop();
             $this->poolObject->pop();
             $this->poolObject->pop();
 
-            $this->assertEquals(2, $this->poolObject->count());
+            $this->assertSame(2, $this->poolObject->count());
 
             $this->poolObject->reclaim();
 
-            $this->assertEquals(5, $this->poolObject->count());
+            $this->assertSame(5, $this->poolObject->count());
         });
     }
 
@@ -219,7 +219,7 @@ trait PoolTestScope
             $this->poolObject->pop();
             $this->poolObject->pop();
 
-            $this->assertEquals(true, $this->poolObject->isEmpty());
+            $this->assertSame(true, $this->poolObject->isEmpty());
         });
     }
 
@@ -227,15 +227,15 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertEquals(true, $this->poolObject->isFull());
+            $this->assertSame(true, $this->poolObject->isFull());
 
             $connection = $this->poolObject->pop();
 
-            $this->assertEquals(false, $this->poolObject->isFull());
+            $this->assertSame(false, $this->poolObject->isFull());
 
             $this->poolObject->push($connection);
 
-            $this->assertEquals(true, $this->poolObject->isFull());
+            $this->assertSame(true, $this->poolObject->isFull());
 
             $this->poolObject->pop();
             $this->poolObject->pop();
@@ -243,11 +243,11 @@ trait PoolTestScope
             $this->poolObject->pop();
             $this->poolObject->pop();
 
-            $this->assertEquals(false, $this->poolObject->isFull());
+            $this->assertSame(false, $this->poolObject->isFull());
 
             $this->poolObject->reclaim();
 
-            $this->assertEquals(true, $this->poolObject->isFull());
+            $this->assertSame(true, $this->poolObject->isFull());
 
             $this->poolObject->pop();
             $this->poolObject->pop();
@@ -255,7 +255,7 @@ trait PoolTestScope
             $this->poolObject->pop();
             $this->poolObject->pop();
 
-            $this->assertEquals(false, $this->poolObject->isFull());
+            $this->assertSame(false, $this->poolObject->isFull());
         });
     }
 
@@ -294,27 +294,27 @@ trait PoolTestScope
                 return $i <= 2 ? 'x' : 'y';
             });
 
-            $this->assertEquals(2, $object->count());
+            $this->assertSame(2, $object->count());
 
             $connection1 = $object->pop();
             $connection2 = $object->pop();
 
-            $this->assertEquals(0, $object->count());
+            $this->assertSame(0, $object->count());
 
-            $this->assertEquals('x', $connection1->getResource());
-            $this->assertEquals('x', $connection2->getResource());
+            $this->assertSame('x', $connection1->getResource());
+            $this->assertSame('x', $connection2->getResource());
 
             $object->destroy();
 
-            $this->assertEquals(2, $object->count());
+            $this->assertSame(2, $object->count());
 
             $connection1 = $object->pop();
             $connection2 = $object->pop();
 
-            $this->assertEquals(0, $object->count());
+            $this->assertSame(0, $object->count());
 
-            $this->assertEquals('y', $connection1->getResource());
-            $this->assertEquals('y', $connection2->getResource());
+            $this->assertSame('y', $connection1->getResource());
+            $this->assertSame('y', $connection2->getResource());
         });
     }
 
@@ -338,7 +338,7 @@ trait PoolTestScope
                 }
             };
 
-            $this->assertEquals(5, $this->poolObject->count());
+            $this->assertSame(5, $this->poolObject->count());
 
             $allocate(3, function () use ($telemetry): void {
                 /** @var object{values: array<int, float|int>} $openGauge */
@@ -347,12 +347,12 @@ trait PoolTestScope
                 $activeGauge = $telemetry->gauges['pool.connection.active.count'];
                 /** @var object{values: array<int, float|int>} $idleGauge */
                 $idleGauge = $telemetry->gauges['pool.connection.idle.count'];
-                $this->assertEquals([1, 2, 3], $openGauge->values);
-                $this->assertEquals([1, 2, 3], $activeGauge->values);
-                $this->assertEquals([0, 0, 0], $idleGauge->values);
+                $this->assertSame([1, 2, 3], $openGauge->values);
+                $this->assertSame([1, 2, 3], $activeGauge->values);
+                $this->assertSame([0, 0, 0], $idleGauge->values);
             });
 
-            $this->assertEquals(5, $this->poolObject->count());
+            $this->assertSame(5, $this->poolObject->count());
 
             $allocate(1, function () use ($telemetry): void {
                 /** @var object{values: array<int, float|int>} $openGauge */
@@ -361,9 +361,9 @@ trait PoolTestScope
                 $activeGauge = $telemetry->gauges['pool.connection.active.count'];
                 /** @var object{values: array<int, float|int>} $idleGauge */
                 $idleGauge = $telemetry->gauges['pool.connection.idle.count'];
-                $this->assertEquals([1, 2, 3, 3, 3, 3, 3], $openGauge->values);
-                $this->assertEquals([1, 2, 3, 2, 1, 0, 1], $activeGauge->values);
-                $this->assertEquals([0, 0, 0, 1, 2, 3, 2], $idleGauge->values);
+                $this->assertSame([1, 2, 3, 3, 3, 3, 3], $openGauge->values);
+                $this->assertSame([1, 2, 3, 2, 1, 0, 1], $activeGauge->values);
+                $this->assertSame([0, 0, 0, 1, 2, 3, 2], $idleGauge->values);
             });
         });
     }

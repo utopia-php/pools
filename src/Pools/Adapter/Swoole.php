@@ -52,17 +52,16 @@ class Swoole extends Adapter
      * afterward, even if the callback throws an exception.
      *
      * @param callable $callback Callback to execute within the critical section.
-     * @param int $timeout Maximum time (in seconds) to wait for the lock.
      * @return mixed The value returned by the callback.
      *
      * @throws \RuntimeException If the lock cannot be acquired within the timeout.
     */
-    public function synchronized(callable $callback, int $timeout): mixed
+    public function synchronized(callable $callback): mixed
     {
-        $acquired = $this->lock->lock($timeout);
+        $acquired = $this->lock->lock();
 
         if (!$acquired) {
-            throw new \RuntimeException("Failed to acquire lock within {$timeout} seconds");
+            throw new \RuntimeException("Failed to acquire lock");
         }
 
         try {

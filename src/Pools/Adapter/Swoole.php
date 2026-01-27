@@ -14,9 +14,10 @@ class Swoole extends Adapter
     {
         $this->pool = new Channel($size);
 
-        // using a coroutine mutex instead of lock as lock is process based and acquires os level lock
-        // result will be all the coroutines will be blocked(http, realtime running on the same event loop)s
-        // coroutine is coroutine safe
+        // With channels, the current coroutine suspends and yields control to the event loop,
+        // allowing other coroutines to continue executing.
+        // Using a blocking lock freezes the worker thread, causing all coroutines in that
+        // worker to stop making progress.
         $this->lock = new Channel(1);
         $this->lock->push(true);
 

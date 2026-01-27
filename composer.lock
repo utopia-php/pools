@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b3660d7c8a767d951cda9d13fc52576d",
+    "content-hash": "d0a862bb8c4e355860a810a500d274c3",
     "packages": [
         {
             "name": "brick/math",
@@ -3764,16 +3764,16 @@
         },
         {
             "name": "swoole/ide-helper",
-            "version": "5.1.2",
+            "version": "6.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/swoole/ide-helper.git",
-                "reference": "33ec7af9111b76d06a70dd31191cc74793551112"
+                "reference": "6f12243dce071714c5febe059578d909698f9a52"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/swoole/ide-helper/zipball/33ec7af9111b76d06a70dd31191cc74793551112",
-                "reference": "33ec7af9111b76d06a70dd31191cc74793551112",
+                "url": "https://api.github.com/repos/swoole/ide-helper/zipball/6f12243dce071714c5febe059578d909698f9a52",
+                "reference": "6f12243dce071714c5febe059578d909698f9a52",
                 "shasum": ""
             },
             "type": "library",
@@ -3790,9 +3790,9 @@
             "description": "IDE help files for Swoole.",
             "support": {
                 "issues": "https://github.com/swoole/ide-helper/issues",
-                "source": "https://github.com/swoole/ide-helper/tree/5.1.2"
+                "source": "https://github.com/swoole/ide-helper/tree/6.0.2"
             },
-            "time": "2024-02-01T22:28:11+00:00"
+            "time": "2025-03-23T07:31:41+00:00"
         },
         {
             "name": "theseer/tokenizer",

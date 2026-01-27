@@ -4,19 +4,22 @@ namespace Utopia\Pools\Adapter;
 
 use Utopia\Pools\Adapter;
 use Swoole\Coroutine\Channel;
-use Swoole\Lock;
 
 class Swoole extends Adapter
 {
     protected Channel $pool;
 
-    /** @var Lock $lock */
-    protected Lock $lock;
+    protected Channel $lock;
     public function initialize(int $size): static
     {
         $this->pool = new Channel($size);
 
-        $this->lock = new Lock(SWOOLE_MUTEX);
+        // With channels, the current coroutine suspends and yields control to the event loop,
+        // allowing other coroutines to continue executing.
+        // Using a blocking lock freezes the worker thread, causing all coroutines in that
+        // worker to stop making progress.
+        $this->lock = new Channel(1);
+        $this->lock->push(true);
 
         return $this;
     }
@@ -60,7 +63,7 @@ class Swoole extends Adapter
     */
     public function synchronized(callable $callback, int $timeout): mixed
     {
-        $acquired = $this->lock->lockwait($timeout);
+        $acquired = $this->lock->pop($timeout);
 
         if (!$acquired) {
             throw new \RuntimeException("Failed to acquire lock within {$timeout} seconds");
@@ -69,7 +72,8 @@ class Swoole extends Adapter
         try {
             return $callback();
         } finally {
-            $this->lock->unlock();
+            // Guaranteed to have space here; avoid timeouts so the token isn't lost.
+            $this->lock->push(true);
         }
     }
 }

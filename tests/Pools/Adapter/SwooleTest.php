@@ -353,4 +353,9 @@ class SwooleTest extends Base
             $this->assertSame(10, $pool->count(), 'Pool should have all connections back');
         });
     }
+    public function testInitOutsideCoroutineNotThrowAnyError()
+    {
+        $pool = new Pool(new Swoole(), 'test', 1, fn () => 'x');
+        $this->assertInstanceOf(Pool::class, $pool);
+    }
 }

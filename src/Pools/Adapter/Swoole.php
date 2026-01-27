@@ -72,7 +72,7 @@ class Swoole extends Adapter
         try {
             return $callback();
         } finally {
-            // guranteed to have space so no timeout otherwise there will be no token and results deadlock
+            // Guaranteed to have space here; avoid timeouts so the token isn't lost.
             $this->lock->push(true);
         }
     }

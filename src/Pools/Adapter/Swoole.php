@@ -4,19 +4,21 @@ namespace Utopia\Pools\Adapter;
 
 use Utopia\Pools\Adapter;
 use Swoole\Coroutine\Channel;
-use Swoole\Lock;
 
 class Swoole extends Adapter
 {
     protected Channel $pool;
 
-    /** @var Lock $lock */
-    protected Lock $lock;
+    protected Channel $lock;
     public function initialize(int $size): static
     {
         $this->pool = new Channel($size);
 
-        $this->lock = new Lock(SWOOLE_MUTEX);
+        // using a coroutine mutex instead of lock as lock is process based and acquires os level lock
+        // result will be all the coroutines will be blocked(http, realtime running on the same event loop)s
+        // coroutine is coroutine safe
+        $this->lock = new Channel(1);
+        $this->lock->push(true);
 
         return $this;
     }
@@ -60,7 +62,7 @@ class Swoole extends Adapter
     */
     public function synchronized(callable $callback, int $timeout): mixed
     {
-        $acquired = $this->lock->lockwait($timeout);
+        $acquired = $this->lock->pop($timeout);
 
         if (!$acquired) {
             throw new \RuntimeException("Failed to acquire lock within {$timeout} seconds");
@@ -69,7 +71,7 @@ class Swoole extends Adapter
         try {
             return $callback();
         } finally {
-            $this->lock->unlock();
+            $this->lock->push(true, $timeout);
         }
     }
 }

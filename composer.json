@@ -20,7 +20,7 @@
     "scripts": {
         "lint": "./vendor/bin/pint --preset psr12 --test",
         "format": "./vendor/bin/pint --preset psr12",
-        "check": "./vendor/bin/phpstan analyse --level max src tests",
+        "check": "./vendor/bin/phpstan analyse -c phpstan.neon",
         "test": "./vendor/bin/phpunit --configuration phpunit.xml --debug"
     },
     "require": {
@@ -31,7 +31,7 @@
         "phpunit/phpunit": "11.*",
         "laravel/pint": "1.*",
         "phpstan/phpstan": "1.*",
-        "swoole/ide-helper": "5.1.2"
+        "swoole/ide-helper": "6.*"
     },
     "suggests": {
         "ext-mongodb": "Needed to support MongoDB database pools",

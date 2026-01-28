@@ -4,22 +4,21 @@ namespace Utopia\Pools\Adapter;
 
 use Utopia\Pools\Adapter;
 use Swoole\Coroutine\Channel;
+use Swoole\Coroutine\Lock;
 
 class Swoole extends Adapter
 {
+    /**
+     * @var Channel<mixed>
+     */
     protected Channel $pool;
 
-    protected Channel $lock;
+    protected Lock $lock;
     public function initialize(int $size): static
     {
-        $this->pool = new Channel($size);
 
-        // With channels, the current coroutine suspends and yields control to the event loop,
-        // allowing other coroutines to continue executing.
-        // Using a blocking lock freezes the worker thread, causing all coroutines in that
-        // worker to stop making progress.
-        $this->lock = new Channel(1);
-        $this->lock->push(true);
+        $this->pool = new Channel($size);
+        $this->lock = new Lock();
 
         return $this;
     }
@@ -45,8 +44,7 @@ class Swoole extends Adapter
 
     public function count(): int
     {
-        $length = $this->pool->length();
-        return is_int($length) ? $length : 0;
+        return (int) $this->pool->length();
     }
 
     /**
@@ -56,24 +54,22 @@ class Swoole extends Adapter
      * afterward, even if the callback throws an exception.
      *
      * @param callable $callback Callback to execute within the critical section.
-     * @param int $timeout Maximum time (in seconds) to wait for the lock.
      * @return mixed The value returned by the callback.
      *
      * @throws \RuntimeException If the lock cannot be acquired within the timeout.
     */
-    public function synchronized(callable $callback, int $timeout): mixed
+    public function synchronized(callable $callback): mixed
     {
-        $acquired = $this->lock->pop($timeout);
+        $acquired = $this->lock->lock();
 
         if (!$acquired) {
-            throw new \RuntimeException("Failed to acquire lock within {$timeout} seconds");
+            throw new \RuntimeException("Failed to acquire lock");
         }
 
         try {
             return $callback();
         } finally {
-            // Guaranteed to have space here; avoid timeouts so the token isn't lost.
-            $this->lock->push(true);
+            $this->lock->unlock();
         }
     }
 }

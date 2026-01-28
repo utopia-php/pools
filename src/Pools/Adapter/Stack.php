@@ -55,13 +55,11 @@ class Stack extends Adapter
      * Executes the callback without acquiring a lock.
      *
      * This implementation does not provide mutual exclusion.
-     * The `$timeout` parameter is ignored.
      *
      * @param callable $callback Callback to execute.
-     * @param int $timeout Ignored.
      * @return mixed The value returned by the callback.
      */
-    public function synchronized(callable $callback, int $timeout): mixed
+    public function synchronized(callable $callback): mixed
     {
         return $callback();
     }

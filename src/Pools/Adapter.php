@@ -20,8 +20,7 @@ abstract class Adapter
      * Execute a callback with lock protection if the adapter supports it
      *
      * @param callable $callback
-     * @param int $timeout Timeout in seconds
      * @return mixed
      */
-    abstract public function synchronized(callable $callback, int $timeout): mixed;
+    abstract public function synchronized(callable $callback): mixed;
 }

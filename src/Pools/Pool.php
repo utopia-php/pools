@@ -266,19 +266,19 @@ class Pool
                         return true;
                     }
                     return false;
-                }, timeout: $this->getSynchronizationTimeout());
+                });
 
                 if ($shouldCreateConnections) {
                     try {
                         $connection = $this->createConnection();
                         $this->pool->synchronized(function () use ($connection) {
                             $this->active[$connection->getID()] = $connection;
-                        }, timeout: $this->getSynchronizationTimeout());
+                        });
                         return $connection;
                     } catch (\Exception $e) {
                         $this->pool->synchronized(function () {
                             $this->connectionsCreated--;
-                        }, timeout: $this->getSynchronizationTimeout());
+                        });
                         throw $e;
                     }
                 }
@@ -296,7 +296,7 @@ class Pool
                     if ($connection instanceof Connection) {
                         $this->pool->synchronized(function () use ($connection) {
                             $this->active[$connection->getID()] = $connection;
-                        }, timeout: $this->getSynchronizationTimeout());
+                        });
                         return $connection;
                     }
                 }
@@ -406,7 +406,7 @@ class Pool
                     return true;
                 };
                 return false;
-            }, timeout: $this->getSynchronizationTimeout());
+            });
 
             if ($shouldCreate) {
                 try {
@@ -414,7 +414,7 @@ class Pool
                 } catch (Exception $e) {
                     $this->pool->synchronized(function () {
                         $this->connectionsCreated--;
-                    }, timeout: $this->getSynchronizationTimeout());
+                    });
                     throw $e;
                 }
             }

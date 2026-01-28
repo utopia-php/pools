@@ -10,13 +10,11 @@ class Swoole extends Adapter
 {
     protected Channel $pool;
 
-    // @phpstan-ignore-next-line
     protected Lock $lock;
     public function initialize(int $size): static
     {
 
         $this->pool = new Channel($size);
-        // @phpstan-ignore-next-line`
         $this->lock = new Lock();
 
         return $this;
@@ -60,7 +58,6 @@ class Swoole extends Adapter
     */
     public function synchronized(callable $callback): mixed
     {
-        // @phpstan-ignore-next-line
         $acquired = $this->lock->lock();
 
         if (!$acquired) {
@@ -70,7 +67,6 @@ class Swoole extends Adapter
         try {
             return $callback();
         } finally {
-            // @phpstan-ignore-next-line
             $this->lock->unlock();
         }
     }

@@ -8,6 +8,9 @@ use Swoole\Coroutine\Lock;
 
 class Swoole extends Adapter
 {
+    /**
+     * @var Channel<mixed>
+     */
     protected Channel $pool;
 
     protected Lock $lock;
@@ -41,8 +44,7 @@ class Swoole extends Adapter
 
     public function count(): int
     {
-        $length = $this->pool->length();
-        return is_int($length) ? $length : 0;
+        return (int) $this->pool->length();
     }
 
     /**

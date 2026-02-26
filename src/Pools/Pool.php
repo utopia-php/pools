@@ -229,8 +229,8 @@ class Pool
             $connection = $this->pop();
             return $callback($connection->getResource());
         } finally {
+            $this->telemetryUseDuration->record(microtime(true) - $start, $this->telemetryAttributes);
             if ($connection !== null) {
-                $this->telemetryUseDuration->record(microtime(true) - $start, $this->telemetryAttributes);
                 $this->reclaim($connection);
             }
         }

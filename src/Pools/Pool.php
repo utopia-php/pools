@@ -44,6 +44,14 @@ class Pool
      */
     protected int $synchronizedTimeout = 3; // seconds
 
+    /**
+     * Maximum time (seconds) a connection can be checked out before being
+     * considered leaked. 0 means disabled (no stale detection).
+     *
+     * @var int
+     */
+    protected int $maxUseTime = 0;
+
     protected PoolAdapter $pool;
 
     /**
@@ -190,6 +198,26 @@ class Pool
     }
 
     /**
+     * Set the maximum time a connection can be checked out before being
+     * considered leaked. When the pool is exhausted, connections exceeding
+     * this time will have their slots reclaimed, allowing new connections
+     * to be created.
+     *
+     * @param int $seconds Maximum use time in seconds. 0 to disable.
+     * @return $this
+     */
+    public function setMaxUseTime(int $seconds): static
+    {
+        $this->maxUseTime = $seconds;
+        return $this;
+    }
+
+    public function getMaxUseTime(): int
+    {
+        return $this->maxUseTime;
+    }
+
+    /**
      * @param Telemetry $telemetry
      * @return $this<TResource>
      */
@@ -272,6 +300,7 @@ class Pool
                 if ($shouldCreateConnections) {
                     try {
                         $connection = $this->createConnection();
+                        $connection->markCheckedOut();
                         $this->pool->synchronized(function () use ($connection) {
                             $this->active[$connection->getID()] = $connection;
                         });
@@ -289,6 +318,16 @@ class Pool
                 $connection = $this->pool->pop($this->getSynchronizationTimeout());
 
                 if ($connection === false || $connection === null) {
+                    // Before giving up, try to recover slots from leaked connections
+                    if ($this->maxUseTime > 0) {
+                        $recovered = $this->recoverStaleConnections();
+                        if ($recovered > 0) {
+                            // Slots freed, don't count this as a retry attempt
+                            $attempts--;
+                            continue;
+                        }
+                    }
+
                     if ($attempts >= $this->getRetryAttempts()) {
                         $activeCount = count($this->active);
                         $idleCount = $this->pool->count();
@@ -300,6 +339,7 @@ class Pool
                     sleep($this->getRetrySleep());
                 } else {
                     if ($connection instanceof Connection) {
+                        $connection->markCheckedOut();
                         $this->pool->synchronized(function () use ($connection) {
                             $this->active[$connection->getID()] = $connection;
                         });
@@ -464,6 +504,31 @@ class Pool
     {
         // Pool is full when all possible connections are available (idle or not created yet)
         return count($this->active) === 0;
+    }
+
+    /**
+     * Detect and recover slots from connections that have been checked out
+     * longer than maxUseTime (likely leaked). Returns the number of
+     * recovered slots.
+     *
+     * @return int Number of recovered connection slots
+     */
+    private function recoverStaleConnections(): int
+    {
+        $now = microtime(true);
+        $recovered = 0;
+
+        return $this->pool->synchronized(function () use ($now, &$recovered): int {
+            foreach ($this->active as $id => $connection) {
+                $checkedOutAt = $connection->getCheckedOutAt();
+                if ($checkedOutAt > 0 && ($now - $checkedOutAt) > $this->maxUseTime) {
+                    unset($this->active[$id]);
+                    $this->connectionsCreated--;
+                    $recovered++;
+                }
+            }
+            return $recovered;
+        });
     }
 
     private function recordPoolTelemetry(): void

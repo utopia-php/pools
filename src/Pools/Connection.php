@@ -16,11 +16,34 @@ class Connection
      */
     protected ?Pool $pool = null;
 
+    protected float $checkedOutAt = 0;
+
     /**
      * @param TResource $resource
      */
     public function __construct(protected mixed $resource)
     {
+    }
+
+    /**
+     * Mark the connection as checked out (record timestamp)
+     *
+     * @return $this<TResource>
+     */
+    public function markCheckedOut(): static
+    {
+        $this->checkedOutAt = microtime(true);
+        return $this;
+    }
+
+    /**
+     * Get the timestamp when this connection was checked out
+     *
+     * @return float
+     */
+    public function getCheckedOutAt(): float
+    {
+        return $this->checkedOutAt;
     }
 
     /**

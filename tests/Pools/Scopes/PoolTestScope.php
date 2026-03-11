@@ -318,6 +318,72 @@ trait PoolTestScope
         });
     }
 
+    public function testPopRetriesAfterConnectionCreationFailure(): void
+    {
+        $this->execute(function (): void {
+            $callCount = 0;
+            $pool = new Pool($this->getAdapter(), 'test-retry', 1, function () use (&$callCount) {
+                $callCount++;
+                if ($callCount <= 1) {
+                    throw new \Exception('Connection failed');
+                }
+                return 'x';
+            });
+            $pool->setReconnectAttempts(1);
+            $pool->setReconnectSleep(0);
+            $pool->setRetrySleep(0);
+
+            // With the fix, pop() should retry after creation failure
+            // First attempt: createConnection fails (callCount=1), falls through
+            // Second attempt: createConnection succeeds (callCount=2)
+            $connection = $pool->pop();
+            $this->assertSame('x', $connection->getResource());
+        });
+    }
+
+    public function testPoolEmptyErrorIncludesActiveCount(): void
+    {
+        $this->execute(function (): void {
+            $this->setUpPool(); // size 5
+            $this->poolObject->setRetryAttempts(1);
+            $this->poolObject->setRetrySleep(0);
+
+            // Pop all 5
+            $this->poolObject->pop();
+            $this->poolObject->pop();
+            $this->poolObject->pop();
+            $this->poolObject->pop();
+            $this->poolObject->pop();
+
+            try {
+                $this->poolObject->pop();
+                $this->fail('Should have thrown');
+            } catch (Exception $e) {
+                $this->assertStringContainsString('active 5', $e->getMessage());
+            }
+        });
+    }
+
+    public function testUseReclainsConnectionOnCallbackException(): void
+    {
+        $this->execute(function (): void {
+            $this->setUpPool(); // size 5
+
+            // use() should reclaim the connection even when callback throws
+            try {
+                $this->poolObject->use(function ($resource): void {
+                    $this->assertSame(4, $this->poolObject->count());
+                    throw new \RuntimeException('Callback failed');
+                });
+            } catch (\RuntimeException) {
+                // expected
+            }
+
+            // Connection should be reclaimed, pool back to full
+            $this->assertSame(5, $this->poolObject->count());
+        });
+    }
+
     public function testPoolTelemetry(): void
     {
         $this->execute(function (): void {

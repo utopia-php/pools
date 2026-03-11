@@ -251,6 +251,7 @@ class Pool
     {
         $attempts = 0;
         $totalSleepTime = 0;
+        $lastException = null;
 
         try {
             do {
@@ -279,7 +280,9 @@ class Pool
                         $this->pool->synchronized(function () {
                             $this->connectionsCreated--;
                         });
-                        throw $e;
+                        // Don't throw immediately - fall through to try getting
+                        // an existing connection from the pool
+                        $lastException = $e;
                     }
                 }
 
@@ -287,7 +290,10 @@ class Pool
 
                 if ($connection === false || $connection === null) {
                     if ($attempts >= $this->getRetryAttempts()) {
-                        throw new Exception("Pool '{$this->name}' is empty (size {$this->size})");
+                        $activeCount = count($this->active);
+                        $idleCount = $this->pool->count();
+                        $message = "Pool '{$this->name}' is empty (size {$this->size}, active {$activeCount}, idle {$idleCount})";
+                        throw new Exception($message, 0, $lastException);
                     }
 
                     $totalSleepTime += $this->getRetrySleep();
@@ -302,7 +308,9 @@ class Pool
                 }
             } while ($attempts < $this->getRetryAttempts());
 
-            throw new Exception('Failed to get a connection from the pool');
+            $activeCount = count($this->active);
+            $idleCount = $this->pool->count();
+            throw new Exception("Pool '{$this->name}' failed to provide a connection (size {$this->size}, active {$activeCount}, idle {$idleCount})", 0, $lastException);
         } finally {
             $this->recordPoolTelemetry();
             $this->telemetryWaitDuration->record($totalSleepTime, $this->telemetryAttributes);

@@ -384,6 +384,75 @@ trait PoolTestScope
         });
     }
 
+    public function testPoolRecoversStaleConnections(): void
+    {
+        $this->execute(function (): void {
+            $pool = new Pool($this->getAdapter(), 'test-stale', 2, fn () => 'resource');
+            $pool->setRetryAttempts(1);
+            $pool->setRetrySleep(0);
+            $pool->setMaxUseTime(1); // 1 second max use time
+
+            // Pop both connections to exhaust the pool
+            $conn1 = $pool->pop();
+            $conn2 = $pool->pop();
+
+            $this->assertSame(0, $pool->count());
+
+            // Simulate time passing by backdating the checkout timestamp
+            // so connections appear stale
+            $reflection = new \ReflectionProperty($conn1, 'checkedOutAt');
+            $reflection->setValue($conn1, microtime(true) - 2); // 2 seconds ago
+            $reflection = new \ReflectionProperty($conn2, 'checkedOutAt');
+            $reflection->setValue($conn2, microtime(true) - 2); // 2 seconds ago
+
+            // Without stale recovery, this would throw "Pool is empty"
+            // With stale recovery, it should detect the leaked connections,
+            // free their slots, and create a new connection
+            $conn3 = $pool->pop();
+            $this->assertSame('resource', $conn3->getResource());
+        });
+    }
+
+    public function testPoolDoesNotRecoverNonStaleConnections(): void
+    {
+        $this->execute(function (): void {
+            $pool = new Pool($this->getAdapter(), 'test-no-stale', 2, fn () => 'resource');
+            $pool->setRetryAttempts(1);
+            $pool->setRetrySleep(0);
+            $pool->setMaxUseTime(60); // 60 seconds - connections won't be stale
+
+            // Pop both connections
+            $conn1 = $pool->pop();
+            $conn2 = $pool->pop();
+
+            $this->assertSame(0, $pool->count());
+
+            // Connections are not stale (just checked out), so pool should still throw
+            $this->expectException(Exception::class);
+            $this->expectExceptionMessage("Pool 'test-no-stale' is empty");
+            $pool->pop();
+        });
+    }
+
+    public function testPoolStaleRecoveryDisabledByDefault(): void
+    {
+        $this->execute(function (): void {
+            $pool = new Pool($this->getAdapter(), 'test-disabled', 1, fn () => 'resource');
+            $pool->setRetryAttempts(1);
+            $pool->setRetrySleep(0);
+            // maxUseTime defaults to 0 (disabled)
+
+            $conn1 = $pool->pop();
+
+            // Even if we backdate the checkout time, stale recovery shouldn't trigger
+            $reflection = new \ReflectionProperty($conn1, 'checkedOutAt');
+            $reflection->setValue($conn1, microtime(true) - 100);
+
+            $this->expectException(Exception::class);
+            $pool->pop();
+        });
+    }
+
     public function testPoolTelemetry(): void
     {
         $this->execute(function (): void {

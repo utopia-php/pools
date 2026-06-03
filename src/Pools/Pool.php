@@ -199,15 +199,17 @@ class Pool
         $this->telemetryActiveConnections = $telemetry->createGauge('pool.connection.active.count');
         $this->telemetryIdleConnections = $telemetry->createGauge('pool.connection.idle.count');
         $this->telemetryPoolCapacity = $telemetry->createGauge('pool.connection.capacity.count');
-        $this->telemetryWaitDuration = $telemetry->createHistogram(
+        $this->telemetryWaitDuration = Histogram::lazy(
+            telemetry: $telemetry,
             name: 'pool.connection.wait_time',
             unit: 's',
-            advisory: ['ExplicitBucketBoundaries' =>  [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10]],
+            advisory: ['ExplicitBucketBoundaries' => [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10]],
         );
-        $this->telemetryUseDuration = $telemetry->createHistogram(
+        $this->telemetryUseDuration = Histogram::lazy(
+            telemetry: $telemetry,
             name: 'pool.connection.use_time',
             unit: 's',
-            advisory: ['ExplicitBucketBoundaries' =>  [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10]],
+            advisory: ['ExplicitBucketBoundaries' => [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10]],
         );
         $this->telemetryAttributes = ['pool' => $this->name, 'size' => $this->size];
 

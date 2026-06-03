@@ -391,6 +391,13 @@ trait PoolTestScope
             $telemetry = new TestTelemetry();
             $this->poolObject->setTelemetry($telemetry);
 
+            $this->assertArrayHasKey('pool.connection.open.count', $telemetry->gauges);
+            $this->assertArrayHasKey('pool.connection.active.count', $telemetry->gauges);
+            $this->assertArrayHasKey('pool.connection.idle.count', $telemetry->gauges);
+            $this->assertArrayHasKey('pool.connection.capacity.count', $telemetry->gauges);
+            $this->assertArrayNotHasKey('pool.connection.wait_time', $telemetry->histograms);
+            $this->assertArrayNotHasKey('pool.connection.use_time', $telemetry->histograms);
+
             $allocate = function (int $amount, callable $assertion): void {
                 $connections = [];
                 for ($i = 0; $i < $amount; $i++) {
@@ -416,6 +423,10 @@ trait PoolTestScope
                 $this->assertSame([1, 2, 3], $openGauge->values);
                 $this->assertSame([1, 2, 3], $activeGauge->values);
                 $this->assertSame([0, 0, 0], $idleGauge->values);
+                /** @var object{values: array<int, float|int>} $waitHistogram */
+                $waitHistogram = $telemetry->histograms['pool.connection.wait_time'];
+                $this->assertCount(3, $waitHistogram->values);
+                $this->assertArrayNotHasKey('pool.connection.use_time', $telemetry->histograms);
             });
 
             $this->assertSame(5, $this->poolObject->count());
@@ -431,6 +442,26 @@ trait PoolTestScope
                 $this->assertSame([1, 2, 3, 2, 1, 0, 1], $activeGauge->values);
                 $this->assertSame([0, 0, 0, 1, 2, 3, 2], $idleGauge->values);
             });
+        });
+    }
+
+    public function testPoolUseDurationTelemetryIsCreatedOnFirstUse(): void
+    {
+        $this->execute(function (): void {
+            $this->setUpPool();
+            $telemetry = new TestTelemetry();
+            $this->poolObject->setTelemetry($telemetry);
+
+            $this->assertArrayNotHasKey('pool.connection.use_time', $telemetry->histograms);
+
+            $this->poolObject->use(function ($resource): void {
+                $this->assertSame('x', $resource);
+            });
+
+            $this->assertArrayHasKey('pool.connection.use_time', $telemetry->histograms);
+            /** @var object{values: array<int, float|int>} $useHistogram */
+            $useHistogram = $telemetry->histograms['pool.connection.use_time'];
+            $this->assertCount(1, $useHistogram->values);
         });
     }
 }

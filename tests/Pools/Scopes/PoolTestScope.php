@@ -384,6 +384,40 @@ trait PoolTestScope
         });
     }
 
+    public function testPoolSelfHealsWhenConnectionCounterLeaks(): void
+    {
+        $this->execute(function (): void {
+            $pool = new Pool($this->getAdapter(), 'test-heal', 2, fn () => 'x');
+            $pool->setRetryAttempts(1);
+            $pool->setRetrySleep(0);
+
+            // Pop both connections (creates them lazily)
+            $c1 = $pool->pop();
+            $c2 = $pool->pop();
+
+            // Simulate a counter leak: connections disappear without
+            // decrementing connectionsCreated. This can happen in Swoole
+            // when push() is not synchronized — another coroutine pops
+            // the connection between pool->push() and unset(active[]),
+            // then the unset removes it from active while still in use,
+            // leading to the connection being lost when that coroutine
+            // finishes without the pool knowing about it.
+            //
+            // Use reflection to reproduce the corrupted state:
+            // connectionsCreated=2 (at capacity), but active=0, idle=0
+            $ref = new \ReflectionClass($pool);
+            $activeProp = $ref->getProperty('active');
+            $activeProp->setValue($pool, []);
+
+            // Now the pool thinks all slots are used (connectionsCreated=2)
+            // but no connections exist anywhere (active=0, idle=0).
+            // Without self-healing, this pop() would throw "pool is empty".
+            $c3 = $pool->pop();
+            $this->assertInstanceOf(Connection::class, $c3);
+            $this->assertSame('x', $c3->getResource());
+        });
+    }
+
     public function testPoolTelemetry(): void
     {
         $this->execute(function (): void {

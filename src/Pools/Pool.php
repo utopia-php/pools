@@ -268,6 +268,19 @@ class Pool
                         $this->connectionsCreated++;
                         return true;
                     }
+
+                    // Self-heal: if no connections exist anywhere but the counter
+                    // says we're at capacity, the counter has drifted (e.g. due to
+                    // a race between push() and pop() in coroutine environments).
+                    // Reset the counter so the pool can recover.
+                    if ($this->pool->count() === 0
+                        && count($this->active) === 0
+                        && $this->connectionsCreated >= $this->size
+                    ) {
+                        $this->connectionsCreated = 1;
+                        return true;
+                    }
+
                     return false;
                 });
 
@@ -362,9 +375,17 @@ class Pool
     public function push(Connection $connection): static
     {
         try {
-            // Push the actual connection back to the pool
+            // Remove from active before pushing to the pool channel.
+            // This must be synchronized so that pop()'s active-count
+            // check inside its own synchronized block sees a consistent
+            // snapshot. Doing the unset first (before the channel push)
+            // prevents a coroutine race where another coroutine pops the
+            // connection from the channel and then our late unset removes
+            // it from active while it is still in use.
+            $this->pool->synchronized(function () use ($connection) {
+                unset($this->active[$connection->getID()]);
+            });
             $this->pool->push($connection);
-            unset($this->active[$connection->getID()]);
 
             return $this;
         } finally {

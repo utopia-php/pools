@@ -142,6 +142,50 @@ trait PoolTestScope
         });
     }
 
+    public function testPoolPopEmptyMessageIncludesLastConnectionError(): void
+    {
+        $this->execute(function (): void {
+            $pool = new Pool($this->getAdapter(), 'broken', 1, function (): string {
+                throw new Exception('connection to server failed: TLS alert');
+            });
+            $pool->setReconnectAttempts(1);
+            $pool->setReconnectSleep(0);
+            $pool->setRetryAttempts(1);
+            $pool->setRetrySleep(0);
+            $pool->setSynchronizationTimeout(1);
+
+            try {
+                $pool->pop();
+                $this->fail('pop() must throw when every connection attempt fails');
+            } catch (Exception $e) {
+                $this->assertStringContainsString("Pool 'broken' is empty (size 1, active 0, idle 0)", $e->getMessage());
+                $this->assertStringContainsString('last error: Failed to create connection: connection to server failed: TLS alert', $e->getMessage());
+                $this->assertNotNull($e->getPrevious());
+                $this->assertSame('connection to server failed: TLS alert', $e->getPrevious()->getPrevious()?->getMessage());
+            }
+        });
+    }
+
+    public function testPoolPopEmptyMessageOmitsLastErrorWithoutConnectionFailure(): void
+    {
+        $this->execute(function (): void {
+            $pool = new Pool($this->getAdapter(), 'exhausted', 1, fn () => 'x');
+            $pool->setRetryAttempts(1);
+            $pool->setRetrySleep(0);
+            $pool->setSynchronizationTimeout(1);
+
+            $pool->pop();
+
+            try {
+                $pool->pop();
+                $this->fail('pop() must throw when the pool is exhausted');
+            } catch (Exception $e) {
+                $this->assertStringNotContainsString('last error', $e->getMessage());
+                $this->assertNull($e->getPrevious());
+            }
+        });
+    }
+
     public function testPoolUse(): void
     {
         $this->execute(function (): void {

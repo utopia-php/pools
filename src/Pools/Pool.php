@@ -294,7 +294,7 @@ class Pool
                     if ($attempts >= $this->getRetryAttempts()) {
                         $activeCount = count($this->active);
                         $idleCount = $this->pool->count();
-                        $message = "Pool '{$this->name}' is empty (size {$this->size}, active {$activeCount}, idle {$idleCount})";
+                        $message = "Pool '{$this->name}' is empty (size {$this->size}, active {$activeCount}, idle {$idleCount})" . $this->lastError($lastException);
                         throw new Exception($message, 0, $lastException);
                     }
 
@@ -312,11 +312,26 @@ class Pool
 
             $activeCount = count($this->active);
             $idleCount = $this->pool->count();
-            throw new Exception("Pool '{$this->name}' failed to provide a connection (size {$this->size}, active {$activeCount}, idle {$idleCount})", 0, $lastException);
+            throw new Exception("Pool '{$this->name}' failed to provide a connection (size {$this->size}, active {$activeCount}, idle {$idleCount})" . $this->lastError($lastException), 0, $lastException);
         } finally {
             $this->recordPoolTelemetry();
             $this->telemetryWaitDuration->record($totalSleepTime, $this->telemetryAttributes);
         }
+    }
+
+    /**
+     * Format the most recent connection-creation failure for inclusion in a
+     * pool exhaustion message, so the underlying cause (for example a TLS or
+     * timeout failure from the backend) is not swallowed by the generic
+     * "pool is empty" message.
+     */
+    private function lastError(?\Exception $exception): string
+    {
+        if ($exception === null) {
+            return '';
+        }
+
+        return "; last error: {$exception->getMessage()}";
     }
 
     /**
@@ -336,7 +351,7 @@ class Pool
                 break;
             } catch (\Exception $e) {
                 if ($attempts >= $this->getReconnectAttempts()) {
-                    throw new \Exception('Failed to create connection: ' . $e->getMessage());
+                    throw new \Exception('Failed to create connection: ' . $e->getMessage(), 0, $e);
                 }
                 sleep($this->getReconnectSleep());
             }

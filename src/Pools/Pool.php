@@ -224,13 +224,20 @@ class Pool
     {
         $start = microtime(true);
         $connection = null;
+        $threw = true;
         try {
             $connection = $this->pop();
-            return $callback($connection->getResource());
+            $result = $callback($connection->getResource());
+            $threw = false;
+            return $result;
         } finally {
             $this->telemetryUseDuration->record(microtime(true) - $start, $this->telemetryAttributes);
             if ($connection !== null) {
-                $this->reclaim($connection);
+                if ($threw) {
+                    $this->destroy($connection);
+                } else {
+                    $this->reclaim($connection);
+                }
             }
         }
     }

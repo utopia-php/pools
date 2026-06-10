@@ -445,6 +445,50 @@ trait PoolTestScope
         });
     }
 
+    public function testPoolSelfHealsWhenConnectionsLeak(): void
+    {
+        $this->execute(function (): void {
+            $this->setUpPool(); // size 5
+
+            // Pop all 5 connections to force creation
+            $connections = [];
+            for ($i = 0; $i < 5; $i++) {
+                $connections[] = $this->poolObject->pop();
+            }
+
+            // Push them all back
+            foreach ($connections as $connection) {
+                $this->poolObject->push($connection);
+            }
+
+            // Simulate leaked connections by draining the pool without tracking
+            // This mimics the bug where connectionsCreated=size but connections vanish
+            // (e.g., Swoole Channel push silently failing)
+            $reflect = new \ReflectionClass($this->poolObject);
+
+            // Drain the underlying adapter directly (simulating lost connections)
+            $poolProp = $reflect->getProperty('pool');
+            $adapter = $poolProp->getValue($this->poolObject);
+            while ($adapter->count() > 0) {
+                $adapter->pop(0);
+            }
+
+            // connectionsCreated is still 5, but no connections exist anywhere
+            // active=0, idle=0 — this is the exact Sentry error state
+            $this->assertSame(0, $adapter->count());
+
+            // Without the fix, this would throw "Pool is empty (size 5, active 0, idle 0)"
+            // With the fix, the pool should self-heal and create a new connection
+            $this->poolObject->setRetryAttempts(1);
+            $this->poolObject->setRetrySleep(0);
+
+            $result = $this->poolObject->use(function ($resource) {
+                return $resource;
+            });
+            $this->assertSame('x', $result);
+        });
+    }
+
     public function testPoolUseDurationTelemetryIsCreatedOnFirstUse(): void
     {
         $this->execute(function (): void {

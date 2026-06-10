@@ -261,7 +261,17 @@ class Pool
                 // Create connection (no lock)
                 // On failure: lock + decrement
                 $shouldCreateConnections = $this->pool->synchronized(function (): bool {
-                    if ($this->pool->count() === 0 && $this->connectionsCreated < $this->size) {
+                    $poolCount = $this->pool->count();
+                    $activeCount = \count($this->active);
+
+                    // Self-heal: if connectionsCreated exceeds actual tracked
+                    // connections, some have leaked (e.g. adapter push failed
+                    // silently). Reconcile the counter so new ones can be created.
+                    if ($this->connectionsCreated > $poolCount + $activeCount) {
+                        $this->connectionsCreated = $poolCount + $activeCount;
+                    }
+
+                    if ($poolCount === 0 && $this->connectionsCreated < $this->size) {
                         $this->connectionsCreated++;
                         return true;
                     }

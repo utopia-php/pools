@@ -224,13 +224,26 @@ class Pool
     {
         $start = microtime(true);
         $connection = null;
+        $callbackFailed = false;
         try {
             $connection = $this->pop();
             return $callback($connection->getResource());
+        } catch (\Throwable $e) {
+            $callbackFailed = true;
+            throw $e;
         } finally {
             $this->telemetryUseDuration->record(microtime(true) - $start, $this->telemetryAttributes);
             if ($connection !== null) {
-                $this->reclaim($connection);
+                if ($callbackFailed) {
+                    try {
+                        $this->destroy($connection);
+                    } catch (\Throwable) {
+                        // Replacement connection creation failed;
+                        // the pool slot is already freed by destroy
+                    }
+                } else {
+                    $this->reclaim($connection);
+                }
             }
         }
     }

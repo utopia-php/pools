@@ -364,23 +364,34 @@ trait PoolTestScope
         });
     }
 
-    public function testUseReclainsConnectionOnCallbackException(): void
+    public function testUseDestroysConnectionOnCallbackException(): void
     {
         $this->execute(function (): void {
-            $this->setUpPool(); // size 5
+            $callCount = 0;
+            $pool = new Pool($this->getAdapter(), 'test-destroy-on-error', 2, function () use (&$callCount) {
+                $callCount++;
+                return 'resource-' . $callCount;
+            });
+            $pool->setReconnectAttempts(1);
+            $pool->setReconnectSleep(0);
 
-            // use() should reclaim the connection even when callback throws
+            // First use: get resource-1, then throw — connection should be destroyed
             try {
-                $this->poolObject->use(function ($resource): void {
-                    $this->assertSame(4, $this->poolObject->count());
-                    throw new \RuntimeException('Callback failed');
+                $pool->use(function ($resource) {
+                    $this->assertSame('resource-1', $resource);
+                    throw new \RuntimeException('Connection broken');
                 });
             } catch (\RuntimeException) {
                 // expected
             }
 
-            // Connection should be reclaimed, pool back to full
-            $this->assertSame(5, $this->poolObject->count());
+            // Pool count should still be full (destroyed connection replaced)
+            $this->assertSame(2, $pool->count());
+
+            // Next use should get a NEW resource, not the broken one
+            $pool->use(function ($resource) {
+                $this->assertSame('resource-2', $resource);
+            });
         });
     }
 

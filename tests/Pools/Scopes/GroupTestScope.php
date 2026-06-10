@@ -3,8 +3,8 @@
 namespace Utopia\Tests\Scopes;
 
 use Exception;
-use Utopia\Pools\Pool;
 use Utopia\Pools\Group;
+use Utopia\Pools\Pool;
 
 trait GroupTestScope
 {
@@ -22,7 +22,7 @@ trait GroupTestScope
     {
         $this->execute(function (): void {
             $this->setUpGroup();
-            $this->groupObject->add(new Pool($this->getAdapter(), 'test', 1, fn () => 'x'));
+            $this->groupObject->add(new Pool($this->getAdapter(), 'test', 1, fn() => 'x'));
 
             $this->assertInstanceOf(Pool::class, $this->groupObject->get('test'));
         });
@@ -32,7 +32,7 @@ trait GroupTestScope
     {
         $this->execute(function (): void {
             $this->setUpGroup();
-            $this->groupObject->add(new Pool($this->getAdapter(), 'test', 1, fn () => 'x'));
+            $this->groupObject->add(new Pool($this->getAdapter(), 'test', 1, fn() => 'x'));
 
             $this->assertInstanceOf(Pool::class, $this->groupObject->get('test'));
 
@@ -46,7 +46,7 @@ trait GroupTestScope
     {
         $this->execute(function (): void {
             $this->setUpGroup();
-            $this->groupObject->add(new Pool($this->getAdapter(), 'test', 1, fn () => 'x'));
+            $this->groupObject->add(new Pool($this->getAdapter(), 'test', 1, fn() => 'x'));
 
             $this->assertInstanceOf(Pool::class, $this->groupObject->get('test'));
 
@@ -62,7 +62,7 @@ trait GroupTestScope
     {
         $this->execute(function (): void {
             $this->setUpGroup();
-            $this->groupObject->add(new Pool($this->getAdapter(), 'test', 5, fn () => 'x'));
+            $this->groupObject->add(new Pool($this->getAdapter(), 'test', 5, fn() => 'x'));
 
             $this->assertSame(5, $this->groupObject->get('test')->count());
 
@@ -82,7 +82,7 @@ trait GroupTestScope
     {
         $this->execute(function (): void {
             $this->setUpGroup();
-            $this->groupObject->add(new Pool($this->getAdapter(), 'test', 5, fn () => 'x'));
+            $this->groupObject->add(new Pool($this->getAdapter(), 'test', 5, fn() => 'x'));
 
             $this->assertSame(3, $this->groupObject->get('test')->getReconnectAttempts());
 
@@ -96,7 +96,7 @@ trait GroupTestScope
     {
         $this->execute(function (): void {
             $this->setUpGroup();
-            $this->groupObject->add(new Pool($this->getAdapter(), 'test', 5, fn () => 'x'));
+            $this->groupObject->add(new Pool($this->getAdapter(), 'test', 5, fn() => 'x'));
 
             $this->assertSame(1, $this->groupObject->get('test')->getReconnectSleep());
 
@@ -110,9 +110,9 @@ trait GroupTestScope
     {
         $this->execute(function (): void {
             $this->setUpGroup();
-            $pool1 = new Pool($this->getAdapter(), 'pool1', 1, fn () => '1');
-            $pool2 = new Pool($this->getAdapter(), 'pool2', 1, fn () => '2');
-            $pool3 = new Pool($this->getAdapter(), 'pool3', 1, fn () => '3');
+            $pool1 = new Pool($this->getAdapter(), 'pool1', 1, fn() => '1');
+            $pool2 = new Pool($this->getAdapter(), 'pool2', 1, fn() => '2');
+            $pool3 = new Pool($this->getAdapter(), 'pool3', 1, fn() => '3');
 
             $this->groupObject->add($pool1);
             $this->groupObject->add($pool2);

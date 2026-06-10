@@ -2,9 +2,9 @@
 
 namespace Utopia\Pools\Adapter;
 
-use Utopia\Pools\Adapter;
 use Swoole\Coroutine\Channel;
 use Swoole\Coroutine\Lock;
+use Utopia\Pools\Adapter;
 
 class Swoole extends Adapter
 {
@@ -63,7 +63,7 @@ class Swoole extends Adapter
         $acquired = $this->lock->lock();
 
         if (!$acquired) {
-            throw new \RuntimeException("Failed to acquire lock");
+            throw new \RuntimeException('Failed to acquire lock');
         }
 
         try {

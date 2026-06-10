@@ -48,7 +48,7 @@ class Stack extends Adapter
 
     public function count(): int
     {
-        return count($this->pool);
+        return \count($this->pool);
     }
 
     /**

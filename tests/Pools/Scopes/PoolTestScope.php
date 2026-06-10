@@ -19,7 +19,7 @@ trait PoolTestScope
 
     protected function setUpPool(): void
     {
-        $this->poolObject = new Pool($this->getAdapter(), 'test', 5, fn () => 'x');
+        $this->poolObject = new Pool($this->getAdapter(), 'test', 5, fn() => 'x');
     }
 
     public function testPoolGetName(): void
@@ -275,9 +275,9 @@ trait PoolTestScope
             // Pool should be empty
             $this->expectException(Exception::class);
 
-            $timeStart = \time();
+            $timeStart = time();
             $this->poolObject->pop();
-            $timeEnd = \time();
+            $timeEnd = time();
 
             $timeDiff = $timeEnd - $timeStart;
 

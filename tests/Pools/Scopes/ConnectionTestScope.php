@@ -69,7 +69,7 @@ trait ConnectionTestScope
     {
         $this->execute(function (): void {
             $this->setUpConnection();
-            $pool = new Pool($this->getAdapter(), 'test', 1, fn () => 'x');
+            $pool = new Pool($this->getAdapter(), 'test', 1, fn() => 'x');
 
             $this->assertNull($this->connectionObject->getPool());
             $this->assertInstanceOf(Connection::class, $this->connectionObject->setPool($pool));
@@ -80,7 +80,7 @@ trait ConnectionTestScope
     {
         $this->execute(function (): void {
             $this->setUpConnection();
-            $pool = new Pool($this->getAdapter(), 'test', 1, fn () => 'x');
+            $pool = new Pool($this->getAdapter(), 'test', 1, fn() => 'x');
 
             $this->assertNull($this->connectionObject->getPool());
             $this->assertInstanceOf(Connection::class, $this->connectionObject->setPool($pool));
@@ -88,7 +88,7 @@ trait ConnectionTestScope
             $pool = $this->connectionObject->getPool();
 
             if ($pool === null) {
-                throw new Exception("Pool should never be null here.");
+                throw new Exception('Pool should never be null here.');
             }
 
             $this->assertInstanceOf(Pool::class, $pool);
@@ -99,7 +99,7 @@ trait ConnectionTestScope
     public function testConnectionReclaim(): void
     {
         $this->execute(function (): void {
-            $pool = new Pool($this->getAdapter(), 'test', 2, fn () => 'x');
+            $pool = new Pool($this->getAdapter(), 'test', 2, fn() => 'x');
 
             $this->assertSame(2, $pool->count());
 

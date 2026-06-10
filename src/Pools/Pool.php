@@ -42,9 +42,7 @@ class Pool
     /**
      * @var int
      */
-    protected int $synchronizedTimeout = 3; // seconds
-
-    protected PoolAdapter $pool;
+    protected int $synchronizedTimeout = 3;
 
     /**
      * @var array<string, Connection<TResource>>
@@ -66,15 +64,14 @@ class Pool
     private array $telemetryAttributes;
 
     /**
-     * @param PoolAdapter $adapter
+     * @param PoolAdapter $pool
      * @param string $name
      * @param int $size
      * @param callable(): TResource $init
      */
-    public function __construct(PoolAdapter $adapter, protected string $name, protected int $size, callable $init)
+    public function __construct(protected PoolAdapter $pool, protected string $name, protected int $size, callable $init)
     {
         $this->init = $init;
-        $this->pool = $adapter;
         // Initialize empty channel (no pre-filling for lazy initialization)
         $this->pool->initialize($this->size);
         $this->setTelemetry(new NoTelemetry());
@@ -106,7 +103,7 @@ class Pool
 
     /**
      * @param int $reconnectAttempts
-     * @return $this<TResource>
+     * @return $this
      */
     public function setReconnectAttempts(int $reconnectAttempts): static
     {
@@ -124,7 +121,7 @@ class Pool
 
     /**
      * @param int $reconnectSleep
-     * @return $this<TResource>
+     * @return $this
      */
     public function setReconnectSleep(int $reconnectSleep): static
     {
@@ -142,7 +139,7 @@ class Pool
 
     /**
      * @param int $retryAttempts
-     * @return $this<TResource>
+     * @return $this
      */
     public function setRetryAttempts(int $retryAttempts): static
     {
@@ -160,7 +157,7 @@ class Pool
 
     /**
      * @param int $retrySleep
-     * @return $this<TResource>
+     * @return $this
      */
     public function setRetrySleep(int $retrySleep): static
     {
@@ -191,7 +188,7 @@ class Pool
 
     /**
      * @param Telemetry $telemetry
-     * @return $this<TResource>
+     * @return $this
      */
     public function setTelemetry(Telemetry $telemetry): static
     {
@@ -274,12 +271,12 @@ class Pool
                 if ($shouldCreateConnections) {
                     try {
                         $connection = $this->createConnection();
-                        $this->pool->synchronized(function () use ($connection) {
+                        $this->pool->synchronized(function () use ($connection): void {
                             $this->active[$connection->getID()] = $connection;
                         });
                         return $connection;
                     } catch (\Exception $e) {
-                        $this->pool->synchronized(function () {
+                        $this->pool->synchronized(function (): void {
                             $this->connectionsCreated--;
                         });
                         // Don't throw immediately - fall through to try getting
@@ -292,7 +289,7 @@ class Pool
 
                 if ($connection === false || $connection === null) {
                     if ($attempts >= $this->getRetryAttempts()) {
-                        $activeCount = count($this->active);
+                        $activeCount = \count($this->active);
                         $idleCount = $this->pool->count();
                         $message = "Pool '{$this->name}' is empty (size {$this->size}, active {$activeCount}, idle {$idleCount})";
                         throw new Exception($message, 0, $lastException);
@@ -302,7 +299,7 @@ class Pool
                     sleep($this->getRetrySleep());
                 } else {
                     if ($connection instanceof Connection) {
-                        $this->pool->synchronized(function () use ($connection) {
+                        $this->pool->synchronized(function () use ($connection): void {
                             $this->active[$connection->getID()] = $connection;
                         });
                         return $connection;
@@ -310,7 +307,7 @@ class Pool
                 }
             } while ($attempts < $this->getRetryAttempts());
 
-            $activeCount = count($this->active);
+            $activeCount = \count($this->active);
             $idleCount = $this->pool->count();
             throw new Exception("Pool '{$this->name}' failed to provide a connection (size {$this->size}, active {$activeCount}, idle {$idleCount})", 0, $lastException);
         } finally {
@@ -357,7 +354,7 @@ class Pool
 
     /**
      * @param Connection<TResource> $connection
-     * @return $this<TResource>
+     * @return $this
      */
     public function push(Connection $connection): static
     {
@@ -385,7 +382,7 @@ class Pool
 
     /**
      * @param Connection<TResource>|null $connection
-     * @return $this<TResource>
+     * @return $this
      */
     public function reclaim(?Connection $connection = null): static
     {
@@ -403,7 +400,7 @@ class Pool
 
     /**
      * @param Connection<TResource>|null $connection
-     * @return $this<TResource>
+     * @return $this
      */
     private function destroyConnection(?Connection $connection = null): static
     {
@@ -414,7 +411,7 @@ class Pool
                 if ($this->connectionsCreated < $this->size) {
                     $this->connectionsCreated++;
                     return true;
-                };
+                }
                 return false;
             });
 
@@ -422,7 +419,7 @@ class Pool
                 try {
                     $this->pool->push($this->createConnection());
                 } catch (Exception $e) {
-                    $this->pool->synchronized(function () {
+                    $this->pool->synchronized(function (): void {
                         $this->connectionsCreated--;
                     });
                     throw $e;
@@ -440,7 +437,7 @@ class Pool
 
     /**
      * @param Connection<TResource>|null $connection
-     * @return $this<TResource>
+     * @return $this
      */
     public function destroy(?Connection $connection = null): static
     {
@@ -465,12 +462,12 @@ class Pool
     public function isFull(): bool
     {
         // Pool is full when all possible connections are available (idle or not created yet)
-        return count($this->active) === 0;
+        return \count($this->active) === 0;
     }
 
     private function recordPoolTelemetry(): void
     {
-        $activeConnections = count($this->active);
+        $activeConnections = \count($this->active);
         $idleConnections = $this->pool->count(); // Connections in the pool (idle)
         $openConnections = $activeConnections + $idleConnections; // Total connections in use or available
 

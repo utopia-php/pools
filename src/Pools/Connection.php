@@ -19,9 +19,7 @@ class Connection
     /**
      * @param TResource $resource
      */
-    public function __construct(protected mixed $resource)
-    {
-    }
+    public function __construct(protected mixed $resource) {}
 
     /**
      * @return string
@@ -33,7 +31,7 @@ class Connection
 
     /**
      * @param string $id
-     * @return $this<TResource>
+     * @return $this
      */
     public function setID(string $id): static
     {
@@ -51,7 +49,7 @@ class Connection
 
     /**
      * @param TResource $resource
-     * @return $this<TResource>
+     * @return $this
      */
     public function setResource(mixed $resource): static
     {
@@ -69,7 +67,7 @@ class Connection
 
     /**
      * @param Pool<TResource> $pool
-     * @return $this<TResource>
+     * @return $this
      */
     public function setPool(Pool $pool): static
     {

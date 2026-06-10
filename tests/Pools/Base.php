@@ -5,8 +5,8 @@ namespace Utopia\Tests;
 use PHPUnit\Framework\TestCase;
 use Utopia\Pools\Adapter;
 use Utopia\Tests\Scopes\ConnectionTestScope;
-use Utopia\Tests\Scopes\PoolTestScope;
 use Utopia\Tests\Scopes\GroupTestScope;
+use Utopia\Tests\Scopes\PoolTestScope;
 
 abstract class Base extends TestCase
 {

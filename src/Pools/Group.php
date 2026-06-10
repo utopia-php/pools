@@ -66,7 +66,7 @@ class Group
     public function use(array $names, callable $callback): mixed
     {
         if (empty($names)) {
-            throw new Exception("Cannot use with empty names");
+            throw new Exception('Cannot use with empty names');
         }
         return $this->useInternal($names, $callback);
     }
@@ -89,7 +89,7 @@ class Group
 
         return $this
             ->get(array_shift($names))
-            ->use(fn ($resource) => $this->useInternal($names, $callback, array_merge($resources, [$resource])));
+            ->use(fn($resource) => $this->useInternal($names, $callback, array_merge($resources, [$resource])));
     }
 
     /**

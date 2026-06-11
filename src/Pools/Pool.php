@@ -261,6 +261,14 @@ class Pool
                 // Create connection (no lock)
                 // On failure: lock + decrement
                 $shouldCreateConnections = $this->pool->synchronized(function (): bool {
+                    // Reconcile: if connectionsCreated exceeds actual tracked connections,
+                    // connections have leaked (e.g., Swoole Channel push silently failed).
+                    // Reset the counter so new connections can be created.
+                    $trackedConnections = \count($this->active) + $this->pool->count();
+                    if ($this->connectionsCreated > $trackedConnections) {
+                        $this->connectionsCreated = $trackedConnections;
+                    }
+
                     if ($this->pool->count() === 0 && $this->connectionsCreated < $this->size) {
                         $this->connectionsCreated++;
                         return true;

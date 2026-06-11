@@ -445,6 +445,40 @@ trait PoolTestScope
         });
     }
 
+    public function testPoolRecoversFromLeakedConnections(): void
+    {
+        $this->execute(function (): void {
+            $adapter = $this->getAdapter();
+
+            $pool = new Pool($adapter, 'test-leak', 3, fn() => 'x');
+            $pool->setRetryAttempts(1);
+            $pool->setRetrySleep(0);
+
+            // Create and return all connections to establish connectionsCreated = 3
+            $c1 = $pool->pop();
+            $c2 = $pool->pop();
+            $c3 = $pool->pop();
+            $pool->reclaim($c1);
+            $pool->reclaim($c2);
+            $pool->reclaim($c3);
+            // State: connectionsCreated=3, active=0, idle=3
+
+            // Simulate connection leak by popping from the underlying adapter directly
+            // This mimics what happens when Swoole Channel loses items
+            // (e.g., channel closed, push silently fails)
+            $adapter->pop(0);
+            $adapter->pop(0);
+            $adapter->pop(0);
+            // State: connectionsCreated=3, active=0, idle=0 (leaked!)
+
+            // With the fix, pop() should detect the inconsistency
+            // and create new connections instead of throwing
+            $connection = $pool->pop();
+            $this->assertInstanceOf(Connection::class, $connection);
+            $this->assertSame('x', $connection->getResource());
+        });
+    }
+
     public function testPoolUseDurationTelemetryIsCreatedOnFirstUse(): void
     {
         $this->execute(function (): void {

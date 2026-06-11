@@ -288,6 +288,16 @@ class Pool
                 $connection = $this->pool->pop($this->getSynchronizationTimeout());
 
                 if ($connection === false || $connection === null) {
+                    // Recover from leaked connections: if connectionsCreated
+                    // exceeds the actual number of tracked connections, reset
+                    // so new connections can be created on the next attempt.
+                    $this->pool->synchronized(function (): void {
+                        $actual = \count($this->active) + $this->pool->count();
+                        if ($actual < $this->connectionsCreated) {
+                            $this->connectionsCreated = $actual;
+                        }
+                    });
+
                     if ($attempts >= $this->getRetryAttempts()) {
                         $activeCount = \count($this->active);
                         $idleCount = $this->pool->count();

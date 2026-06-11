@@ -464,4 +464,30 @@ trait PoolTestScope
             $this->assertCount(1, $useHistogram->values);
         });
     }
+
+    public function testPoolRecoversFromLeakedConnections(): void
+    {
+        $this->execute(function (): void {
+            $pool = new Pool($this->getAdapter(), 'leak-test', 2, fn() => 'recovered');
+            $pool->setRetryAttempts(2);
+            $pool->setRetrySleep(0);
+            $pool->setReconnectAttempts(1);
+            $pool->setReconnectSleep(0);
+
+            // Pop both connections to reach connectionsCreated = 2
+            $pool->pop();
+            $pool->pop();
+
+            // Simulate leaked connections: connectionsCreated is at capacity (2)
+            // but no connections are tracked in active or idle.
+            // This mirrors the Sentry error: "Pool 'pubsub' is empty (size 9, active 0, idle 0)"
+            $ref = new \ReflectionClass($pool);
+            $activeRef = $ref->getProperty('active');
+            $activeRef->setValue($pool, []);
+
+            // pop() should detect the inconsistency and create a new connection
+            $connection = $pool->pop();
+            $this->assertSame('recovered', $connection->getResource());
+        });
+    }
 }

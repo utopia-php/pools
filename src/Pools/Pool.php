@@ -245,8 +245,12 @@ class Pool
      * @return $this
      * @internal
      */
-    public function release(Connection $connection, bool $failed = false): static
+    public function release(Connection $connection, bool $failed = false, ?float $start = null): static
     {
+        if ($start !== null) {
+            $this->telemetryUseDuration->record(microtime(true) - $start, $this->telemetryAttributes);
+        }
+
         if (!$failed) {
             return $this->reclaim($connection);
         }
@@ -278,7 +282,7 @@ class Pool
         $resource = $connection->getResource();
 
         if (!\is_object($resource)) {
-            return true;
+            return !\is_resource($resource);
         }
 
         try {

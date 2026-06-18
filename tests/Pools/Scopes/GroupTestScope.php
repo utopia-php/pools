@@ -5,6 +5,7 @@ namespace Utopia\Tests\Scopes;
 use Exception;
 use Utopia\Pools\Group;
 use Utopia\Pools\Pool;
+use Utopia\Telemetry\Adapter\Test as TestTelemetry;
 
 trait GroupTestScope
 {
@@ -176,6 +177,29 @@ trait GroupTestScope
                 $this->assertSame('resource-1', (string) $resource);
             });
             $this->assertSame(1, $created);
+        });
+    }
+
+    public function testGroupUseRecordsUseDurationTelemetry(): void
+    {
+        $this->execute(function (): void {
+            $this->setUpGroup();
+            $telemetry = new TestTelemetry();
+
+            $this->groupObject
+                ->add(new Pool($this->getAdapter(), 'pool1', 1, fn () => '1'))
+                ->setTelemetry($telemetry);
+
+            $this->assertArrayNotHasKey('pool.connection.use_time', $telemetry->histograms);
+
+            $this->groupObject->use(['pool1'], function (...$resources): void {
+                $this->assertSame(['1'], $resources);
+            });
+
+            $this->assertArrayHasKey('pool.connection.use_time', $telemetry->histograms);
+            /** @var object{values: array<int, float|int>} $useHistogram */
+            $useHistogram = $telemetry->histograms['pool.connection.use_time'];
+            $this->assertCount(1, $useHistogram->values);
         });
     }
 }

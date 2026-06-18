@@ -71,12 +71,14 @@ class Group
 
         $connections = [];
         $pools = [];
+        $starts = [];
         $started = false;
         $failed = false;
 
         try {
             foreach ($names as $name) {
                 $pool = $this->get($name);
+                $starts[] = microtime(true);
                 $pools[] = $pool;
                 $connections[] = $pool->pop();
             }
@@ -88,7 +90,7 @@ class Group
             throw $error;
         } finally {
             for ($i = \count($connections) - 1; $i >= 0; $i--) {
-                $pools[$i]->release($connections[$i], $failed);
+                $pools[$i]->release($connections[$i], $failed, $starts[$i]);
             }
         }
     }

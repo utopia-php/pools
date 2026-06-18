@@ -487,6 +487,44 @@ trait PoolTestScope
         });
     }
 
+    public function testUseDestroysNativeResourceConnectionAfterCallbackFailure(): void
+    {
+        $this->execute(function (): void {
+            $created = 0;
+            $pool = new Pool($this->getAdapter(), 'test-destroy-native-resource', 2, function () use (&$created) {
+                $created++;
+                $resource = fopen('php://temp', 'r+');
+                if ($resource === false) {
+                    throw new \RuntimeException('Failed to open stream');
+                }
+
+                fwrite($resource, 'resource-' . $created);
+                rewind($resource);
+
+                return $resource;
+            });
+            $pool->setReconnectAttempts(1);
+            $pool->setReconnectSleep(0);
+
+            try {
+                $pool->use(function ($resource): void {
+                    $this->assertIsResource($resource);
+                    $this->assertSame('resource-1', stream_get_contents($resource));
+                    throw new \RuntimeException('Callback failed');
+                });
+            } catch (\RuntimeException) {
+                // expected
+            }
+
+            $this->assertSame(2, $pool->count());
+
+            $pool->use(function ($resource): void {
+                $this->assertIsResource($resource);
+                $this->assertSame('resource-2', stream_get_contents($resource));
+            });
+        });
+    }
+
     public function testUsePreservesCallbackExceptionWhenReplacementFails(): void
     {
         $this->execute(function (): void {

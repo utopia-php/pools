@@ -137,4 +137,33 @@ trait GroupTestScope
             $this->assertSame(1, $pool3->count());
         });
     }
+
+    public function testGroupUseReclaimsEarlierConnectionWhenLaterPoolIsMissing(): void
+    {
+        $this->execute(function (): void {
+            $this->setUpGroup();
+            $created = 0;
+            $pool = new Pool($this->getAdapter(), 'pool1', 1, function () use (&$created) {
+                $created++;
+                return 'resource-' . $created;
+            });
+
+            $this->groupObject->add($pool);
+
+            try {
+                $this->groupObject->use(['pool1', 'missing'], function (): void {
+                });
+                $this->fail('Should have thrown');
+            } catch (Exception) {
+                // expected
+            }
+
+            $this->assertSame(1, $pool->count());
+
+            $pool->use(function (string $resource): void {
+                $this->assertSame('resource-1', $resource);
+            });
+            $this->assertSame(1, $created);
+        });
+    }
 }

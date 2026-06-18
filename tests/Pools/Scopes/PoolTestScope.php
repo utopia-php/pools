@@ -364,20 +364,36 @@ trait PoolTestScope
         });
     }
 
-    public function testUseDestroysConnectionOnCallbackException(): void
+    public function testUseDestroysConnectionWhenRecoveryFails(): void
     {
         $this->execute(function (): void {
             $created = 0;
             $pool = new Pool($this->getAdapter(), 'test-destroy-on-error', 2, function () use (&$created) {
                 $created++;
-                return 'resource-' . $created;
+                return new class ('resource-' . $created, $created === 1) implements \Stringable {
+                    public function __construct(private string $name, private bool $failRecovery)
+                    {
+                    }
+
+                    public function __toString(): string
+                    {
+                        return $this->name;
+                    }
+
+                    public function reconnect(): void
+                    {
+                        if ($this->failRecovery) {
+                            throw new \RuntimeException('Recovery failed');
+                        }
+                    }
+                };
             });
             $pool->setReconnectAttempts(1);
             $pool->setReconnectSleep(0);
 
             try {
-                $pool->use(function (string $resource): void {
-                    $this->assertSame('resource-1', $resource);
+                $pool->use(function (\Stringable $resource): void {
+                    $this->assertSame('resource-1', (string) $resource);
                     throw new \RuntimeException('Callback failed');
                 });
             } catch (\RuntimeException) {
@@ -386,8 +402,8 @@ trait PoolTestScope
 
             $this->assertSame(2, $pool->count());
 
-            $pool->use(function (string $resource): void {
-                $this->assertSame('resource-2', $resource);
+            $pool->use(function (\Stringable $resource): void {
+                $this->assertSame('resource-2', (string) $resource);
             });
         });
     }
@@ -399,18 +415,32 @@ trait PoolTestScope
             $pool = new Pool($this->getAdapter(), 'test-preserve-callback-error', 1, function () use (&$created) {
                 $created++;
                 if ($created > 1) {
-                    throw new \RuntimeException('Replacement failed');
+                    throw new \TypeError('Replacement failed');
                 }
 
-                return 'resource-' . $created;
+                return new class ('resource-' . $created) implements \Stringable {
+                    public function __construct(private string $name)
+                    {
+                    }
+
+                    public function __toString(): string
+                    {
+                        return $this->name;
+                    }
+
+                    public function reconnect(): void
+                    {
+                        throw new \RuntimeException('Recovery failed');
+                    }
+                };
             });
             $pool->setReconnectAttempts(1);
             $pool->setReconnectSleep(0);
 
             $error = null;
             try {
-                $pool->use(function (string $resource): void {
-                    $this->assertSame('resource-1', $resource);
+                $pool->use(function (\Stringable $resource): void {
+                    $this->assertSame('resource-1', (string) $resource);
                     throw new \LogicException('Callback failed');
                 });
             } catch (\LogicException $error) {

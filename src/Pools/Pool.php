@@ -236,16 +236,46 @@ class Pool
             $this->telemetryUseDuration->record(microtime(true) - $start, $this->telemetryAttributes);
             if ($connection !== null) {
                 if ($failed) {
-                    try {
-                        $this->destroy($connection);
-                    } catch (\Throwable) {
-                        // Preserve the callback exception; destroy already removed the connection.
+                    if ($this->recover($connection)) {
+                        $this->reclaim($connection);
+                    } else {
+                        try {
+                            $this->destroy($connection);
+                        } catch (\Throwable) {
+                            // Preserve the callback exception; destroy already removed the connection.
+                        }
                     }
                 } else {
                     $this->reclaim($connection);
                 }
             }
         }
+    }
+
+    /**
+     * @param Connection<TResource> $connection
+     */
+    private function recover(Connection $connection): bool
+    {
+        $resource = $connection->getResource();
+
+        if (!\is_object($resource)) {
+            return true;
+        }
+
+        try {
+            if (\method_exists($resource, 'reset')) {
+                $resource->reset();
+            }
+
+            if (\method_exists($resource, 'reconnect')) {
+                $resource->reconnect();
+            }
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -431,7 +461,7 @@ class Pool
             if ($shouldCreate) {
                 try {
                     $this->pool->push($this->createConnection());
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     $this->pool->synchronized(function (): void {
                         $this->connectionsCreated--;
                     });

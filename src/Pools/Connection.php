@@ -19,7 +19,9 @@ class Connection
     /**
      * @param TResource $resource
      */
-    public function __construct(protected mixed $resource) {}
+    public function __construct(protected mixed $resource)
+    {
+    }
 
     /**
      * @return string

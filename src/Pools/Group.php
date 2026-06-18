@@ -89,7 +89,7 @@ class Group
 
         return $this
             ->get(array_shift($names))
-            ->use(fn($resource) => $this->useInternal($names, $callback, array_merge($resources, [$resource])));
+            ->use(fn ($resource) => $this->useInternal($names, $callback, array_merge($resources, [$resource])));
     }
 
     /**

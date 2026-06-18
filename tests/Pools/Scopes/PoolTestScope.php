@@ -19,7 +19,7 @@ trait PoolTestScope
 
     protected function setUpPool(): void
     {
-        $this->poolObject = new Pool($this->getAdapter(), 'test', 5, fn() => 'x');
+        $this->poolObject = new Pool($this->getAdapter(), 'test', 5, fn () => 'x');
     }
 
     public function testPoolGetName(): void
@@ -364,23 +364,61 @@ trait PoolTestScope
         });
     }
 
-    public function testUseReclainsConnectionOnCallbackException(): void
+    public function testUseDestroysConnectionOnCallbackException(): void
     {
         $this->execute(function (): void {
-            $this->setUpPool(); // size 5
+            $created = 0;
+            $pool = new Pool($this->getAdapter(), 'test-destroy-on-error', 2, function () use (&$created) {
+                $created++;
+                return 'resource-' . $created;
+            });
+            $pool->setReconnectAttempts(1);
+            $pool->setReconnectSleep(0);
 
-            // use() should reclaim the connection even when callback throws
             try {
-                $this->poolObject->use(function ($resource): void {
-                    $this->assertSame(4, $this->poolObject->count());
+                $pool->use(function (string $resource): void {
+                    $this->assertSame('resource-1', $resource);
                     throw new \RuntimeException('Callback failed');
                 });
             } catch (\RuntimeException) {
                 // expected
             }
 
-            // Connection should be reclaimed, pool back to full
-            $this->assertSame(5, $this->poolObject->count());
+            $this->assertSame(2, $pool->count());
+
+            $pool->use(function (string $resource): void {
+                $this->assertSame('resource-2', $resource);
+            });
+        });
+    }
+
+    public function testUsePreservesCallbackExceptionWhenReplacementFails(): void
+    {
+        $this->execute(function (): void {
+            $created = 0;
+            $pool = new Pool($this->getAdapter(), 'test-preserve-callback-error', 1, function () use (&$created) {
+                $created++;
+                if ($created > 1) {
+                    throw new \RuntimeException('Replacement failed');
+                }
+
+                return 'resource-' . $created;
+            });
+            $pool->setReconnectAttempts(1);
+            $pool->setReconnectSleep(0);
+
+            $error = null;
+            try {
+                $pool->use(function (string $resource): void {
+                    $this->assertSame('resource-1', $resource);
+                    throw new \LogicException('Callback failed');
+                });
+            } catch (\LogicException $error) {
+            }
+
+            $this->assertInstanceOf(\LogicException::class, $error);
+            $this->assertSame('Callback failed', $error->getMessage());
+            $this->assertSame(1, $pool->count());
         });
     }
 

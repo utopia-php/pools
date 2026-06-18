@@ -343,7 +343,7 @@ class SwooleTest extends Base
     }
     public function testInitOutsideCoroutineNotThrowAnyError(): void
     {
-        $pool = new Pool(new Swoole(), 'test', 1, fn() => 'x');
+        $pool = new Pool(new Swoole(), 'test', 1, fn () => 'x');
         $this->assertInstanceOf(Pool::class, $pool);
     }
 }

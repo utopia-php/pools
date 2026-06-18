@@ -74,6 +74,8 @@ class Group
         $starts = [];
         $started = false;
         $failed = false;
+        $thrown = null;
+        $result = null;
 
         try {
             foreach ($names as $name) {
@@ -84,15 +86,31 @@ class Group
             }
 
             $started = true;
-            return $callback(...array_map(fn (Connection $connection) => $connection->getResource(), $connections));
+            $result = $callback(...array_map(fn (Connection $connection) => $connection->getResource(), $connections));
         } catch (\Throwable $error) {
+            $thrown = $error;
             $failed = $started;
-            throw $error;
-        } finally {
-            for ($i = \count($connections) - 1; $i >= 0; $i--) {
+        }
+
+        $releaseError = null;
+
+        for ($i = \count($connections) - 1; $i >= 0; $i--) {
+            try {
                 $pools[$i]->release($connections[$i], $failed, $starts[$i]);
+            } catch (\Throwable $error) {
+                $releaseError ??= $error;
             }
         }
+
+        if ($thrown !== null) {
+            throw $thrown;
+        }
+
+        if ($releaseError !== null) {
+            throw $releaseError;
+        }
+
+        return $result;
     }
 
     /**

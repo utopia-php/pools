@@ -143,9 +143,20 @@ trait GroupTestScope
         $this->execute(function (): void {
             $this->setUpGroup();
             $created = 0;
-            $pool = new Pool($this->getAdapter(), 'pool1', 1, function () use (&$created) {
+            $resources = [];
+            $pool = new Pool($this->getAdapter(), 'pool1', 1, function () use (&$created, &$resources) {
                 $created++;
-                return 'resource-' . $created;
+                $resources[] = new class ('resource-' . $created) implements \Stringable {
+                    public function __construct(private string $name)
+                    {
+                    }
+
+                    public function __toString(): string
+                    {
+                        return $this->name;
+                    }
+                };
+                return $resources[$created - 1];
             });
 
             $this->groupObject->add($pool);
@@ -160,8 +171,9 @@ trait GroupTestScope
 
             $this->assertSame(1, $pool->count());
 
-            $pool->use(function (string $resource): void {
-                $this->assertSame('resource-1', $resource);
+            $pool->use(function (\Stringable $resource) use (&$resources): void {
+                $this->assertSame($resources[0], $resource);
+                $this->assertSame('resource-1', (string) $resource);
             });
             $this->assertSame(1, $created);
         });

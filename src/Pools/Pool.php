@@ -235,20 +235,38 @@ class Pool
         } finally {
             $this->telemetryUseDuration->record(microtime(true) - $start, $this->telemetryAttributes);
             if ($connection !== null) {
-                if ($failed) {
-                    if ($this->recover($connection)) {
-                        $this->reclaim($connection);
-                    } else {
-                        try {
-                            $this->destroy($connection);
-                        } catch (\Throwable) {
-                            // Preserve the callback exception; destroy already removed the connection.
-                        }
-                    }
-                } else {
-                    $this->reclaim($connection);
+                $this->release($connection, $failed);
+            }
+        }
+    }
+
+    /**
+     * @param Connection<TResource> $connection
+     * @return $this
+     * @internal
+     */
+    public function release(Connection $connection, bool $failed = false): static
+    {
+        if (!$failed) {
+            return $this->reclaim($connection);
+        }
+
+        if ($this->recover($connection)) {
+            try {
+                return $this->reclaim($connection);
+            } catch (\Throwable) {
+                try {
+                    return $this->destroy($connection);
+                } catch (\Throwable) {
+                    return $this;
                 }
             }
+        }
+
+        try {
+            return $this->destroy($connection);
+        } catch (\Throwable) {
+            return $this;
         }
     }
 
@@ -264,18 +282,26 @@ class Pool
         }
 
         try {
+            $recovered = false;
+
             if (\method_exists($resource, 'reset')) {
-                $resource->reset();
+                $recovered = true;
+                if ($resource->reset() === false) {
+                    return false;
+                }
             }
 
             if (\method_exists($resource, 'reconnect')) {
-                $resource->reconnect();
+                $recovered = true;
+                if ($resource->reconnect() === false) {
+                    return false;
+                }
             }
         } catch (\Throwable) {
             return false;
         }
 
-        return true;
+        return $recovered;
     }
 
     /**

@@ -68,28 +68,29 @@ class Group
         if (empty($names)) {
             throw new Exception('Cannot use with empty names');
         }
-        return $this->useInternal($names, $callback);
-    }
 
-    /**
-     * Internal recursive callback for `use`.
-     *
-     * @template TReturn
-     * @param array<string> $names Name of resources
-     * @param callable(mixed...): TReturn $callback Function that receives the connection resources
-     * @param array<mixed> $resources
-     * @return TReturn
-     * @throws Exception
-     */
-    private function useInternal(array $names, callable $callback, array $resources = []): mixed
-    {
-        if (empty($names)) {
-            return $callback(...$resources);
+        $connections = [];
+        $pools = [];
+        $started = false;
+        $failed = false;
+
+        try {
+            foreach ($names as $name) {
+                $pool = $this->get($name);
+                $pools[] = $pool;
+                $connections[] = $pool->pop();
+            }
+
+            $started = true;
+            return $callback(...array_map(fn (Connection $connection) => $connection->getResource(), $connections));
+        } catch (\Throwable $error) {
+            $failed = $started;
+            throw $error;
+        } finally {
+            for ($i = \count($connections) - 1; $i >= 0; $i--) {
+                $pools[$i]->release($connections[$i], $failed);
+            }
         }
-
-        return $this
-            ->get(array_shift($names))
-            ->use(fn ($resource) => $this->useInternal($names, $callback, array_merge($resources, [$resource])));
     }
 
     /**

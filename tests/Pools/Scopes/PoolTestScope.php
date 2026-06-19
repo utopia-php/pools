@@ -391,57 +391,89 @@ trait PoolTestScope
             $telemetry = new TestTelemetry();
             $this->poolObject->setTelemetry($telemetry);
 
-            $this->assertArrayHasKey('pool.connection.open.count', $telemetry->gauges);
-            $this->assertArrayHasKey('pool.connection.active.count', $telemetry->gauges);
-            $this->assertArrayHasKey('pool.connection.idle.count', $telemetry->gauges);
-            $this->assertArrayHasKey('pool.connection.capacity.count', $telemetry->gauges);
+            $this->assertArrayHasKey('pool.connection.open.count', $telemetry->observableGauges);
+            $this->assertArrayHasKey('pool.connection.active.count', $telemetry->observableGauges);
+            $this->assertArrayHasKey('pool.connection.idle.count', $telemetry->observableGauges);
+            $this->assertArrayHasKey('pool.connection.capacity.count', $telemetry->observableGauges);
             $this->assertArrayNotHasKey('pool.connection.wait_time', $telemetry->histograms);
             $this->assertArrayNotHasKey('pool.connection.use_time', $telemetry->histograms);
 
-            $allocate = function (int $amount, callable $assertion): void {
-                $connections = [];
-                for ($i = 0; $i < $amount; $i++) {
-                    $connections[] = $this->poolObject->pop();
-                }
-
-                $assertion();
-
-                foreach ($connections as $connection) {
-                    $this->poolObject->reclaim($connection);
-                }
+            // Observable gauges report their value at collection time, so read them on demand.
+            $read = function (string $name) use ($telemetry): float|int {
+                /** @var object{callback: \Closure} $gauge */
+                $gauge = $telemetry->observableGauges[$name];
+                $value = 0;
+                ($gauge->callback)(function (float|int $observed) use (&$value): void {
+                    $value = $observed;
+                });
+                return $value;
             };
 
             $this->assertSame(5, $this->poolObject->count());
 
-            $allocate(3, function () use ($telemetry): void {
-                /** @var object{values: array<int, float|int>} $openGauge */
-                $openGauge = $telemetry->gauges['pool.connection.open.count'];
-                /** @var object{values: array<int, float|int>} $activeGauge */
-                $activeGauge = $telemetry->gauges['pool.connection.active.count'];
-                /** @var object{values: array<int, float|int>} $idleGauge */
-                $idleGauge = $telemetry->gauges['pool.connection.idle.count'];
-                $this->assertSame([1, 2, 3], $openGauge->values);
-                $this->assertSame([1, 2, 3], $activeGauge->values);
-                $this->assertSame([0, 0, 0], $idleGauge->values);
-                /** @var object{values: array<int, float|int>} $waitHistogram */
-                $waitHistogram = $telemetry->histograms['pool.connection.wait_time'];
-                $this->assertCount(3, $waitHistogram->values);
-                $this->assertArrayNotHasKey('pool.connection.use_time', $telemetry->histograms);
-            });
+            $connections = [];
+            for ($i = 0; $i < 3; $i++) {
+                $connections[] = $this->poolObject->pop();
+            }
 
+            $this->assertSame(3, $read('pool.connection.open.count'));
+            $this->assertSame(3, $read('pool.connection.active.count'));
+            $this->assertSame(0, $read('pool.connection.idle.count'));
+            $this->assertSame(3, $read('pool.connection.capacity.count'));
+
+            /** @var object{values: array<int, float|int>} $waitHistogram */
+            $waitHistogram = $telemetry->histograms['pool.connection.wait_time'];
+            $this->assertCount(3, $waitHistogram->values);
+            $this->assertArrayNotHasKey('pool.connection.use_time', $telemetry->histograms);
+
+            // Reclaim one connection: it returns to the pool as idle.
+            $this->poolObject->reclaim(array_pop($connections));
+
+            $this->assertSame(3, $read('pool.connection.open.count'));
+            $this->assertSame(2, $read('pool.connection.active.count'));
+            $this->assertSame(1, $read('pool.connection.idle.count'));
+            $this->assertSame(3, $read('pool.connection.capacity.count'));
+
+            // Reclaim the rest.
+            foreach ($connections as $connection) {
+                $this->poolObject->reclaim($connection);
+            }
+
+            $this->assertSame(3, $read('pool.connection.open.count'));
+            $this->assertSame(0, $read('pool.connection.active.count'));
+            $this->assertSame(3, $read('pool.connection.idle.count'));
             $this->assertSame(5, $this->poolObject->count());
+        });
+    }
 
-            $allocate(1, function () use ($telemetry): void {
-                /** @var object{values: array<int, float|int>} $openGauge */
-                $openGauge = $telemetry->gauges['pool.connection.open.count'];
-                /** @var object{values: array<int, float|int>} $activeGauge */
-                $activeGauge = $telemetry->gauges['pool.connection.active.count'];
-                /** @var object{values: array<int, float|int>} $idleGauge */
-                $idleGauge = $telemetry->gauges['pool.connection.idle.count'];
-                $this->assertSame([1, 2, 3, 3, 3, 3, 3], $openGauge->values);
-                $this->assertSame([1, 2, 3, 2, 1, 0, 1], $activeGauge->values);
-                $this->assertSame([0, 0, 0, 1, 2, 3, 2], $idleGauge->values);
-            });
+    public function testPoolTelemetrySwapStopsPreviousAdapter(): void
+    {
+        $this->execute(function (): void {
+            $this->setUpPool();
+
+            $first = new TestTelemetry();
+            $this->poolObject->setTelemetry($first);
+
+            // Swapping adapters must neutralize the gauges bound to the previous one,
+            // otherwise its collection cycle keeps sampling this pool and duplicates metrics.
+            $second = new TestTelemetry();
+            $this->poolObject->setTelemetry($second);
+
+            $observed = function (TestTelemetry $telemetry, string $name): bool {
+                /** @var object{callback: \Closure} $gauge */
+                $gauge = $telemetry->observableGauges[$name];
+                $called = false;
+                ($gauge->callback)(function () use (&$called): void {
+                    $called = true;
+                });
+                return $called;
+            };
+
+            foreach (['active', 'idle', 'open', 'capacity'] as $metric) {
+                $name = "pool.connection.{$metric}.count";
+                $this->assertFalse($observed($first, $name), "stale gauge {$name} still emits");
+                $this->assertTrue($observed($second, $name), "current gauge {$name} does not emit");
+            }
         });
     }
 

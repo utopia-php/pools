@@ -400,12 +400,14 @@ trait PoolTestScope
 
             // Observable gauges report their value at collection time, so read them on demand.
             $read = function (string $name) use ($telemetry): float|int {
-                /** @var object{callback: \Closure} $gauge */
+                /** @var object{callbacks: array<int, \Closure>} $gauge */
                 $gauge = $telemetry->observableGauges[$name];
                 $value = 0;
-                ($gauge->callback)(function (float|int $observed) use (&$value): void {
-                    $value = $observed;
-                });
+                foreach ($gauge->callbacks as $callback) {
+                    $callback(function (float|int $observed) use (&$value): void {
+                        $value = $observed;
+                    });
+                }
                 return $value;
             };
 
@@ -446,34 +448,38 @@ trait PoolTestScope
         });
     }
 
-    public function testPoolTelemetrySwapStopsPreviousAdapter(): void
+    public function testMultiplePoolsShareGaugesButEmitDistinctSeries(): void
     {
         $this->execute(function (): void {
-            $this->setUpPool();
+            // Adapters cache observable gauges by name, so every pool that registers
+            // 'pool.connection.*.count' shares one instrument. Each pool must still emit its own
+            // series; a single-callback gauge would drop all but the last pool to bind.
+            $telemetry = new TestTelemetry();
 
-            $first = new TestTelemetry();
-            $this->poolObject->setTelemetry($first);
+            $alpha = new Pool($this->getAdapter(), 'alpha', 5, fn() => 'x');
+            $beta = new Pool($this->getAdapter(), 'beta', 5, fn() => 'x');
+            $alpha->setTelemetry($telemetry);
+            $beta->setTelemetry($telemetry);
 
-            // Swapping adapters must neutralize the gauges bound to the previous one,
-            // otherwise its collection cycle keeps sampling this pool and duplicates metrics.
-            $second = new TestTelemetry();
-            $this->poolObject->setTelemetry($second);
+            $alpha->pop();
+            $beta->pop();
+            $beta->pop();
 
-            $observed = function (TestTelemetry $telemetry, string $name): bool {
-                /** @var object{callback: \Closure} $gauge */
-                $gauge = $telemetry->observableGauges[$name];
-                $called = false;
-                ($gauge->callback)(function () use (&$called): void {
-                    $called = true;
+            /** @var object{callbacks: array<int, \Closure>} $gauge */
+            $gauge = $telemetry->observableGauges['pool.connection.active.count'];
+
+            $series = [];
+            foreach ($gauge->callbacks as $callback) {
+                $callback(function (float|int $value, iterable $attributes = []) use (&$series): void {
+                    $attrs = [];
+                    foreach ($attributes as $key => $attr) {
+                        $attrs[$key] = $attr;
+                    }
+                    $series[$attrs['pool']] = $value;
                 });
-                return $called;
-            };
-
-            foreach (['active', 'idle', 'open', 'capacity'] as $metric) {
-                $name = "pool.connection.{$metric}.count";
-                $this->assertFalse($observed($first, $name), "stale gauge {$name} still emits");
-                $this->assertTrue($observed($second, $name), "current gauge {$name} does not emit");
             }
+
+            $this->assertSame(['alpha' => 1, 'beta' => 2], $series);
         });
     }
 

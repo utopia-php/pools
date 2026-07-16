@@ -450,6 +450,47 @@ trait PoolTestScope
         });
     }
 
+    public function testUseRecoversAndReusesConnectionWhenRecoverySucceeds(): void
+    {
+        $this->execute(function (): void {
+            $created = 0;
+            $pool = new Pool($this->getAdapter(), 'test-recover-and-reuse', 2, function () use (&$created) {
+                $created++;
+                return new class ('resource-' . $created) implements \Stringable {
+                    public function __construct(private string $name)
+                    {
+                    }
+
+                    public function __toString(): string
+                    {
+                        return $this->name;
+                    }
+
+                    public function reconnect(): bool
+                    {
+                        return true;
+                    }
+                };
+            });
+            $pool->setReconnectAttempts(1);
+            $pool->setReconnectSleep(0);
+
+            try {
+                $pool->use(function (\Stringable $resource): void {
+                    $this->assertSame('resource-1', (string) $resource);
+                    throw new \RuntimeException('Callback failed');
+                });
+            } catch (\RuntimeException) {
+                // expected
+            }
+
+            $pool->use(function (\Stringable $resource) use (&$created): void {
+                $this->assertSame('resource-1', (string) $resource);
+                $this->assertSame(1, $created);
+            });
+        });
+    }
+
     public function testUseDestroysObjectConnectionWithoutRecoveryHooks(): void
     {
         $this->execute(function (): void {

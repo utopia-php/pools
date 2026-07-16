@@ -17,9 +17,9 @@ Although this library is part of the [Utopia Framework](https://github.com/utopi
 * **Connection** - An object that holds a long living database or other external connection in a form of a resource. PDO object or a Redis client are examples of resources that can be used inside a connection.
 * **Group** - A group of multiple pools.
 
-## Getting Started
+## Getting started
 
-Install using composer:
+Install using Composer:
 ```bash
 composer require utopia-php/pools
 ```
@@ -73,7 +73,7 @@ $group->setReconnectAttempts(3); // Set the number of reconnect attempts for all
 $group->setReconnectSleep(5); // Set the sleep time between reconnect attempts for all pools
 ```
 
-## Reconnect and Retry
+## Reconnect and retry
 
 Both reconnect and retry logic is used in `pop()` method to handle problematic scenarios. Both allow you to configure 2 properties:
 
@@ -84,7 +84,7 @@ Both reconnect and retry logic is used in `pop()` method to handle problematic s
 
 **Retry** settings are used when pool of connection is empty and there is no more connections to pop. This can occur for example, when your server supports more concurrent actions than your pool.
 
-## System Requirements
+## System requirements
 
 Utopia Framework requires PHP 8.0 or later. We recommend using the latest PHP version whenever possible.
 

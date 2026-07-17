@@ -68,28 +68,49 @@ class Group
         if (empty($names)) {
             throw new Exception('Cannot use with empty names');
         }
-        return $this->useInternal($names, $callback);
-    }
 
-    /**
-     * Internal recursive callback for `use`.
-     *
-     * @template TReturn
-     * @param array<string> $names Name of resources
-     * @param callable(mixed...): TReturn $callback Function that receives the connection resources
-     * @param array<mixed> $resources
-     * @return TReturn
-     * @throws Exception
-     */
-    private function useInternal(array $names, callable $callback, array $resources = []): mixed
-    {
-        if (empty($names)) {
-            return $callback(...$resources);
+        $connections = [];
+        $pools = [];
+        $starts = [];
+        $started = false;
+        $failed = false;
+        $thrown = null;
+        $result = null;
+
+        try {
+            foreach ($names as $name) {
+                $pool = $this->get($name);
+                $starts[] = microtime(true);
+                $pools[] = $pool;
+                $connections[] = $pool->pop();
+            }
+
+            $started = true;
+            $result = $callback(...array_map(fn(Connection $connection) => $connection->getResource(), $connections));
+        } catch (\Throwable $error) {
+            $thrown = $error;
+            $failed = $started;
         }
 
-        return $this
-            ->get(array_shift($names))
-            ->use(fn($resource) => $this->useInternal($names, $callback, array_merge($resources, [$resource])));
+        $releaseError = null;
+
+        for ($i = \count($connections) - 1; $i >= 0; $i--) {
+            try {
+                $pools[$i]->release($connections[$i], $failed, $starts[$i]);
+            } catch (\Throwable $error) {
+                $releaseError ??= $error;
+            }
+        }
+
+        if ($thrown !== null) {
+            throw $thrown;
+        }
+
+        if ($releaseError !== null) {
+            throw $releaseError;
+        }
+
+        return $result;
     }
 
     /**

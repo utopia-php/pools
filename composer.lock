@@ -1877,20 +1877,19 @@
         },
         {
             "name": "utopia-php/telemetry",
-            "version": "0.4.0",
+            "version": "0.4.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/utopia-php/telemetry.git",
-                "reference": "e0630df7d8176833cd4882f78814a5b893dcb0e0"
+                "reference": "139943bffcd4f6dd8fb9ed247f946a1d151b006a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/utopia-php/telemetry/zipball/e0630df7d8176833cd4882f78814a5b893dcb0e0",
-                "reference": "e0630df7d8176833cd4882f78814a5b893dcb0e0",
+                "url": "https://api.github.com/repos/utopia-php/telemetry/zipball/139943bffcd4f6dd8fb9ed247f946a1d151b006a",
+                "reference": "139943bffcd4f6dd8fb9ed247f946a1d151b006a",
                 "shasum": ""
             },
             "require": {
-                "ext-opentelemetry": "*",
                 "ext-protobuf": "*",
                 "nyholm/psr7": "1.*",
                 "open-telemetry/exporter-otlp": "1.*",
@@ -1899,10 +1898,6 @@
                 "symfony/http-client": "7.*"
             },
             "require-dev": {
-                "laravel/pint": "1.*",
-                "phpbench/phpbench": "1.*",
-                "phpstan/phpstan": "2.*",
-                "phpunit/phpunit": "11.*",
                 "swoole/ide-helper": "6.*"
             },
             "suggest": {
@@ -1919,6 +1914,7 @@
             "license": [
                 "MIT"
             ],
+            "description": "A lite & fast telemetry library, with adapters for OpenTelemetry",
             "keywords": [
                 "framework",
                 "php",
@@ -1926,9 +1922,9 @@
             ],
             "support": {
                 "issues": "https://github.com/utopia-php/telemetry/issues",
-                "source": "https://github.com/utopia-php/telemetry/tree/0.4.0"
+                "source": "https://github.com/utopia-php/telemetry/tree/0.4.5"
             },
-            "time": "2026-05-29T11:57:04+00:00"
+            "time": "2026-07-08T11:07:25+00:00"
         }
     ],
     "packages-dev": [

@@ -36,7 +36,7 @@
     "require-dev": {
         "swoole/ide-helper": "6.*"
     },
-    "suggests": {
+    "suggest": {
         "ext-mongodb": "Needed to support MongoDB database pools",
         "ext-redis": "Needed to support Redis cache pools",
         "ext-pdo": "Needed to support MariaDB, MySQL or SQLite database pools",
@@ -50,8 +50,5 @@
             "php-http/discovery": false,
             "tbachert/spi": false
         }
-    },
-    "suggest": {
-        "ext-swoole": "Required to use the Swoole pool adapter"
     }
 }

@@ -382,7 +382,11 @@ class Pool
                             $this->active[$connection->getID()] = $connection;
                         });
                         return $connection;
-                    } catch (\Exception $e) {
+                    } catch (\Throwable $e) {
+                        // Catch every Throwable, not just Exception: the slot was reserved
+                        // (connectionsCreated++) before creating, so an Error (e.g. TypeError
+                        // from the init callback) must release it too. Otherwise the reserved
+                        // capacity leaks and the pool permanently reports itself as empty.
                         $this->pool->synchronized(function (): void {
                             $this->connectionsCreated--;
                         });

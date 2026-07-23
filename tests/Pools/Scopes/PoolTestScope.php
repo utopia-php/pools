@@ -341,6 +341,50 @@ trait PoolTestScope
         });
     }
 
+    public function testPopReleasesReservedSlotWhenCreationThrowsError(): void
+    {
+        $this->execute(function (): void {
+            // The init callback throws a Throwable that is NOT an Exception (e.g. a
+            // TypeError). pop() reserves a capacity slot (connectionsCreated++) before
+            // creating, so it must release that slot on ANY failure, not just Exception.
+            // Otherwise the reserved slots leak and the pool permanently reports itself
+            // as empty ("size N, active 0, idle 0") even though nothing is in use.
+            $pool = new Pool($this->getAdapter(), 'test-error-leak', 2, function () {
+                throw new \TypeError('Connection init failed');
+            });
+            $pool->setReconnectAttempts(1);
+            $pool->setReconnectSleep(0);
+            $pool->setRetryAttempts(1);
+            $pool->setRetrySleep(0);
+
+            // Exhaust every creation attempt; each one must fully unwind.
+            for ($i = 0; $i < 5; $i++) {
+                try {
+                    $pool->pop();
+                    $this->fail('Should have thrown');
+                } catch (Exception | \TypeError) {
+                    // expected: creation always fails
+                }
+            }
+
+            // No connection was ever handed out, so all capacity must still be available.
+            $this->assertSame(2, $pool->count());
+            $this->assertSame(0, \count($this->readActive($pool)));
+        });
+    }
+
+    /**
+     * @param Pool<mixed> $pool
+     * @return array<string, mixed>
+     */
+    private function readActive(Pool $pool): array
+    {
+        $reflection = new \ReflectionProperty(Pool::class, 'active');
+        /** @var array<string, mixed> $active */
+        $active = $reflection->getValue($pool);
+        return $active;
+    }
+
     public function testPoolEmptyErrorIncludesActiveCount(): void
     {
         $this->execute(function (): void {

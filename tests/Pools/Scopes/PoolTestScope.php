@@ -341,6 +341,38 @@ trait PoolTestScope
         });
     }
 
+    public function testPopReleasesCreationSlotWhenInitThrowsThrowable(): void
+    {
+        $this->execute(function (): void {
+            $callCount = 0;
+            // The init callback first throws a non-Exception Throwable (e.g. a
+            // TypeError/Error). The creation slot must still be released so the
+            // pool is not left permanently "empty" with a leaked connectionsCreated.
+            $pool = new Pool($this->getAdapter(), 'test-throwable-leak', 1, function () use (&$callCount) {
+                $callCount++;
+                if ($callCount <= 1) {
+                    throw new \Error('Fatal init error');
+                }
+                return 'x';
+            });
+            $pool->setReconnectAttempts(1);
+            $pool->setReconnectSleep(0);
+            $pool->setRetryAttempts(2);
+            $pool->setRetrySleep(0);
+
+            // First attempt: createConnection() throws a non-Exception Throwable.
+            // Second attempt: createConnection() succeeds. Without releasing the
+            // slot, connectionsCreated stays at the size and pop() reports the
+            // pool as empty forever.
+            $connection = $pool->pop();
+            $this->assertSame('x', $connection->getResource());
+
+            // The slot accounting is consistent: one connection is active, none idle.
+            $pool->push($connection);
+            $this->assertSame(1, $pool->count());
+        });
+    }
+
     public function testPoolEmptyErrorIncludesActiveCount(): void
     {
         $this->execute(function (): void {

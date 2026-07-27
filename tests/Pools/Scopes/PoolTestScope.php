@@ -341,6 +341,35 @@ trait PoolTestScope
         });
     }
 
+    public function testPopReleasesReservedSlotWhenCreationThrowsError(): void
+    {
+        $this->execute(function (): void {
+            // pop() reserves capacity before the connection exists. An Error
+            // escaping the catch used to keep that slot, draining the pool one
+            // failed pop at a time.
+            $pool = new Pool($this->getAdapter(), 'test-error-leak', 2, function (): string {
+                throw new \TypeError('Connection init failed');
+            });
+            $pool->setReconnectAttempts(1);
+            $pool->setReconnectSleep(0);
+            $pool->setRetryAttempts(1);
+            $pool->setRetrySleep(0);
+
+            // More attempts than slots, so a kept reservation shows up as lost
+            // capacity by the end.
+            for ($i = 0; $i < 5; $i++) {
+                try {
+                    $pool->pop();
+                    $this->fail('Should have thrown');
+                } catch (Exception $e) {
+                    $this->assertInstanceOf(\TypeError::class, $e->getPrevious());
+                }
+            }
+
+            $this->assertSame(2, $pool->count());
+        });
+    }
+
     public function testPoolEmptyErrorIncludesActiveCount(): void
     {
         $this->execute(function (): void {

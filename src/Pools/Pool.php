@@ -376,19 +376,28 @@ class Pool
                 });
 
                 if ($shouldCreateConnections) {
+                    $reserved = true;
+
                     try {
                         $connection = $this->createConnection();
                         $this->pool->synchronized(function () use ($connection): void {
                             $this->active[$connection->getID()] = $connection;
                         });
+                        $reserved = false;
+
                         return $connection;
-                    } catch (\Exception $e) {
-                        $this->pool->synchronized(function (): void {
-                            $this->connectionsCreated--;
-                        });
+                    } catch (\Throwable $e) {
+                        // Throwable, not Exception: the init callback is caller
+                        // supplied, so an Error holds the slot just the same.
                         // Don't throw immediately - fall through to try getting
                         // an existing connection from the pool
                         $lastException = $e;
+                    } finally {
+                        if ($reserved) {
+                            $this->pool->synchronized(function (): void {
+                                $this->connectionsCreated--;
+                            });
+                        }
                     }
                 }
 

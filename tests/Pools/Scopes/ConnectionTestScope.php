@@ -102,4 +102,61 @@ trait ConnectionTestScope
             $this->assertSame('y', $connection2->resource);
         });
     }
+
+    public function testDroppingAPoolFreesTheResourcesItWasHolding(): void
+    {
+        $this->execute(function (): void {
+            TrackedResource::$freed = 0;
+
+            (function (): void {
+                $pool = new Pool($this->getAdapter(), 'lifetime', 3, fn(): TrackedResource => new TrackedResource(), timeout: 1.0);
+
+                // Check every slot out at once so three distinct resources exist,
+                // then hand them all back: the pool is left holding them idle in
+                // its adapter's storage, which is where they used to become
+                // unreachable but uncollectable.
+                $connections = [$pool->pop(), $pool->pop(), $pool->pop()];
+
+                foreach ($connections as $connection) {
+                    $connection->reclaim();
+                }
+            })();
+
+            gc_collect_cycles();
+
+            // A strong connection-to-pool reference closes a cycle that the
+            // collector cannot trace, because with the Swoole adapter one edge
+            // runs through a Coroutine\Channel and lives in C memory. Every pool
+            // and pooled resource then survived for the life of the process.
+            $this->assertSame(3, TrackedResource::$freed);
+        });
+    }
+
+    public function testAConnectionOutlivesItsPoolWithoutReclaimingFailing(): void
+    {
+        $this->execute(function (): void {
+            // The pool is unreferenced the moment pop() returns, so a weakly held
+            // owner is already gone by the time the connection is handed back.
+            $connection = $this->checkedOutConnection('orphan');
+
+            gc_collect_cycles();
+
+            $connection->reclaim();
+            $connection->destroy();
+
+            // Returning capacity to a pool that no longer exists is a no-op, but
+            // the connection still owns its resource.
+            $this->assertSame('x', $connection->resource);
+        });
+    }
+}
+
+final class TrackedResource
+{
+    public static int $freed = 0;
+
+    public function __destruct()
+    {
+        ++self::$freed;
+    }
 }

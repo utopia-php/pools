@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Utopia\Pools\Adapter;
 
 use Swoole\Coroutine\Channel;
@@ -14,6 +16,10 @@ class Swoole extends Adapter
     protected Channel $pool;
 
     protected Lock $lock;
+
+    /** Shortest wait Swoole will honour without treating it as unbounded. */
+    private const float POLL = 0.001;
+
     public function initialize(int $size): static
     {
 
@@ -27,19 +33,20 @@ class Swoole extends Adapter
     {
         // Push connection to channel
         $this->pool->push($connection);
+
         return $this;
     }
 
     /**
-     * Pop an item from the pool.
+     * Pop an item from the pool, waiting up to $timeout seconds.
      *
-     * @param int $timeout Timeout in seconds. Use 0 for non-blocking pop.
-     * @return mixed|false Returns the pooled value, or false if the pool is empty
-     *                     or the timeout expires.
+     * @return mixed|false The pooled value, or false if the timeout expired.
      */
-    public function pop(int $timeout): mixed
+    public function pop(float $timeout): mixed
     {
-        return $this->pool->pop($timeout);
+        // Swoole reads a non-positive channel timeout as "wait forever", the exact
+        // opposite of a zero budget, so clamp to a single short poll instead.
+        return $this->pool->pop($timeout > 0.0 ? $timeout : self::POLL);
     }
 
     public function count(): int
@@ -53,16 +60,16 @@ class Swoole extends Adapter
      * The lock is acquired before invoking the callback and is always released
      * afterward, even if the callback throws an exception.
      *
-     * @param callable $callback Callback to execute within the critical section.
+     * @param  callable  $callback  Callback to execute within the critical section.
      * @return mixed The value returned by the callback.
      *
      * @throws \RuntimeException If the lock cannot be acquired within the timeout.
-    */
+     */
     public function synchronized(callable $callback): mixed
     {
         $acquired = $this->lock->lock();
 
-        if (!$acquired) {
+        if (! $acquired) {
             throw new \RuntimeException('Failed to acquire lock');
         }
 

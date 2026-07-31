@@ -27,79 +27,117 @@ composer require utopia-php/pools
 
 ```php
 use PDO;
-use Utopia\Pools\Pool;
+use Utopia\Pools\Adapter\Swoole;
 use Utopia\Pools\Group;
+use Utopia\Pools\Pool;
 
-$pool = new Pool('mysql-pool', 1 /* number of connections */, function() {
-    $host = '127.0.0.1';
-    $db   = 'test';
-    $user = 'root';
-    $pass = '';
-    $charset = 'utf8mb4';
+$pool = new Pool(
+    adapter: new Swoole,
+    name: 'mysql-pool',
+    size: 8,
+    init: fn () => new PDO('mysql:host=127.0.0.1;dbname=test;charset=utf8mb4', 'root', ''),
+    timeout: 2.0,
+);
 
-    try {
-        $pdo = new PDO("mysql:host=$host;dbname=$db;charset=$charset", $user, $pass);
-    } catch (\PDOException $e) {
-        throw new \PDOException($e->getMessage(), (int)$e->getCode());
-    }
+// Preferred: the pool hands the resource to the callback and takes it back
+// afterwards, discarding it if the callback threw.
+$rows = $pool->use(fn (PDO $pdo) => $pdo->query('SELECT 1')->fetchAll());
 
-    return $pdo;
-});
+// Manual lifetime, when `use()` does not fit.
+$connection = $pool->pop();
+$connection->id;         // "mysql-pool-6885a1f2c4e19"
+$connection->resource;   // the PDO instance
+$connection->reclaim();  // return it for reuse
+$connection->destroy();  // or discard it and free the capacity
 
-$pool->setReconnectAttempts(3); // number of attempts to reconnect
-$pool->setReconnectSleep(5); // seconds to sleep between reconnect attempts
+$pool->count();     // connections a caller could still obtain
+$pool->isEmpty();   // none available without one being returned first
+$pool->isFull();    // nothing checked out
 
-$pool->setRetryAttempts(3); // number of attempts to get connection
-$pool->setRetrySleep(5); // seconds to sleep between failed pop-connection attempts
-
-$connection = $pool->pop(); // Get a connection from the pool
-$connection->getID(); // Get the connection ID
-$connection->getResource(); // Get the connection resource
-
-$pool->push($connection); // Return the connection to the pool
-
-$pool->reclaim(); // Recalim the pool, return all active connections automatically
-
-$pool->count(); // Get the number of available connections
-
-$pool->isEmpty(); // Check if the pool is empty
-
-$pool->isFull(); // Check if the pool is full
-
-$group = new Group(); // Create a group of pools
-$group->add($pool); // Add a pool to the group
-$group->get('mysql-pool'); // Get a pool from the group
-$group->setReconnectAttempts(3); // Set the number of reconnect attempts for all pools
-$group->setReconnectSleep(5); // Set the sleep time between reconnect attempts for all pools
+$group = new Group;
+$group->add($pool);
+$group->get('mysql-pool');
+$group->use(['mysql-pool'], fn (PDO $pdo) => $pdo->query('SELECT 1'));
 ```
 
-## Reconnect and retry
+## Acquiring connections
 
-Both reconnect and retry logic is used in `pop()` method to handle problematic scenarios. Both allow you to configure 2 properties:
+`timeout` bounds how long `pop()` waits for a connection to become available.
+The pool creates one when it has spare capacity, otherwise it waits for one to
+come back, and it throws once the budget is spent. There is one number for
+waiting, and it is the number a caller experiences.
 
-- `attempts` - How many times library will retry when problem occurs
-- `sleep` - How long will library wait for before next retry attempt
+It does not cover time spent inside `init`. The pool cannot interrupt a blocking
+connect, so give `init` its own connect timeout if you need the total bounded —
+for PDO that is `PDO::ATTR_TIMEOUT`.
 
-**Reconnect** settings are used when your connection initialization callback throws an exception. This can occur for example, when a handshake with SQL server fails.
+If creating a connection fails, that exception propagates untouched, so callers
+keep the original type to act on. The pool does not retry and does not fall back
+to waiting, because waiting for another caller's connection after your own
+create failed is a retry in disguise. Own retries in `init`:
 
-**Retry** settings are used when pool of connection is empty and there is no more connections to pop. This can occur for example, when your server supports more concurrent actions than your pool.
+```php
+$pool = new Pool(
+    adapter: new Swoole,
+    name: 'mysql-pool',
+    size: 8,
+    init: fn () => $breaker->call(fn () => new PDO(/* ... */)),
+    timeout: 2.0,
+);
+```
+
+Compose [`utopia-php/circuit-breaker`](https://github.com/utopia-php/circuit-breaker)
+there rather than counting attempts, because a breaker carries state between
+calls and an attempt counter cannot.
+
+## Upgrading from 1.x
+
+Configuration is constructor-only, and the retry knobs are gone.
+
+- `timeout` is a required constructor argument, and it is the pool's only
+  timeout. It replaces `setRetryAttempts()`, `setRetrySleep()` and
+  `setSynchronizationTimeout()`. Pass the total wait you want, in seconds.
+- `setReconnectAttempts()` and `setReconnectSleep()` are removed with no
+  replacement. Wrap `init` if you want to retry a failed connect.
+- `setTelemetry()` is removed. Pass `telemetry:` to the constructor.
+- `Group::setReconnectAttempts()`, `Group::setReconnectSleep()` and
+  `Group::setTelemetry()` are removed. Pools arrive configured.
+- `Pool::getName()` and `Pool::getSize()` are now the `$name` and `$size`
+  properties. The `getReconnectAttempts()`, `getReconnectSleep()`,
+  `getRetryAttempts()`, `getRetrySleep()` and `getSynchronizationTimeout()`
+  getters are removed.
+- `Connection` is `final readonly`. `getID()`, `getResource()` and `getPool()`
+  become the `$id` and `$resource` properties; `getPool()` has no replacement.
+  `setID()`, `setResource()` and `setPool()` are removed.
+- `Connection::reclaim()` and `Connection::destroy()` return `void` instead of
+  the pool.
+- `Pool::release()` no longer takes a `$start` timestamp. The pool measures use
+  time itself.
+- `Adapter::pop()` takes a `float` timeout. Custom adapters need the wider type.
+- `init` is typed `Closure` rather than `callable`. Pass a closure, or wrap a
+  string or array callable with `Closure::fromCallable()`.
+
+Two behaviour changes worth checking against your own code:
+
+- A failed connect used to be absorbed by an internal retry and can now reach
+  the caller on the first attempt, as whatever type `init` threw rather than a
+  pool exception.
+- `destroy()` no longer creates the replacement connection itself. Capacity is
+  freed immediately and the next `pop()` creates one, so `destroy()` cannot
+  block on a connect or fail for reasons unrelated to the connection you asked
+  it to discard.
 
 ## System requirements
 
-Utopia Framework requires PHP 8.0 or later. We recommend using the latest PHP version whenever possible.
+Utopia pools requires PHP 8.4 or later. We recommend using the latest PHP version whenever possible.
 
 ## Tests
 
-To run all unit tests, use the following Docker command:
+Run the test suite and static analysis from the monorepo root:
 
 ```bash
-docker compose exec tests vendor/bin/phpunit --configuration phpunit.xml tests
-```
-
-To run static code analysis, use the following Psalm command:
-
-```bash
-docker compose exec tests vendor/bin/psalm --show-info=true
+bin/monorepo test pools
+bin/monorepo check pools
 ```
 
 ## Copyright and license

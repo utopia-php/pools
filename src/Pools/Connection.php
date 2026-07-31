@@ -1,103 +1,44 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Utopia\Pools;
 
-use Exception;
-
 /**
+ * A resource checked out of a pool.
+ *
+ * Immutable: identity, resource and owning pool are fixed at construction. A
+ * connection held by one coroutine cannot be repointed at another pool or have
+ * its resource swapped underneath it, and the pool is never null, so returning
+ * a connection can no longer fail for want of an owner.
+ *
  * @template TResource
  */
-class Connection
+final readonly class Connection
 {
-    protected string $id = '';
+    /**
+     * @param  TResource  $resource
+     * @param  Pool<TResource>  $pool
+     */
+    public function __construct(
+        public string $id,
+        public mixed $resource,
+        private Pool $pool,
+    ) {}
 
     /**
-     * @var Pool<TResource>|null
+     * Return this connection to its pool for reuse.
      */
-    protected ?Pool $pool = null;
-
-    /**
-     * @param TResource $resource
-     */
-    public function __construct(protected mixed $resource) {}
-
-    /**
-     * @return string
-     */
-    public function getID(): string
+    public function reclaim(): void
     {
-        return $this->id;
+        $this->pool->reclaim($this);
     }
 
     /**
-     * @param string $id
-     * @return $this
+     * Discard this connection and free its capacity for a replacement.
      */
-    public function setID(string $id): static
+    public function destroy(): void
     {
-        $this->id = $id;
-        return $this;
-    }
-
-    /**
-     * @return TResource
-     */
-    public function getResource(): mixed
-    {
-        return $this->resource;
-    }
-
-    /**
-     * @param TResource $resource
-     * @return $this
-     */
-    public function setResource(mixed $resource): static
-    {
-        $this->resource = $resource;
-        return $this;
-    }
-
-    /**
-     * @return Pool<TResource>|null
-     */
-    public function getPool(): ?Pool
-    {
-        return $this->pool;
-    }
-
-    /**
-     * @param Pool<TResource> $pool
-     * @return $this
-     */
-    public function setPool(Pool $pool): static
-    {
-        $this->pool = $pool;
-        return $this;
-    }
-
-    /**
-     * @return Pool<TResource>
-     * @throws Exception
-     */
-    public function reclaim(): Pool
-    {
-        if ($this->pool === null) {
-            throw new Exception('You cannot reclaim connection that does not have a pool.');
-        }
-
-        return $this->pool->reclaim($this);
-    }
-
-    /**
-     * @return Pool<TResource>
-     * @throws Exception
-     */
-    public function destroy(): Pool
-    {
-        if ($this->pool === null) {
-            throw new Exception('You cannot destroy connection that does not have a pool.');
-        }
-
-        return $this->pool->destroy($this);
+        $this->pool->destroy($this);
     }
 }

@@ -1,15 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Utopia\Tests\Scopes;
 
 use Exception;
+use Utopia\Pools\Adapter;
+use Utopia\Pools\Adapter\Stack;
 use Utopia\Pools\Connection;
 use Utopia\Pools\Pool;
 use Utopia\Telemetry\Adapter\Test as TestTelemetry;
 
 trait PoolTestScope
 {
-    abstract protected function getAdapter(): \Utopia\Pools\Adapter;
+    abstract protected function getAdapter(): Adapter;
+
     abstract protected function execute(callable $callback): mixed;
 
     /**
@@ -19,14 +24,14 @@ trait PoolTestScope
 
     protected function setUpPool(): void
     {
-        $this->poolObject = new Pool($this->getAdapter(), 'test', 5, fn() => 'x');
+        $this->poolObject = new Pool($this->getAdapter(), 'test', 5, fn(): string => 'x', timeout: 0.0);
     }
 
     public function testPoolGetName(): void
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertSame('test', $this->poolObject->getName());
+            $this->assertSame('test', $this->poolObject->name);
         });
     }
 
@@ -34,87 +39,7 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool();
-            $this->assertSame(5, $this->poolObject->getSize());
-        });
-    }
-
-    public function testPoolGetReconnectAttempts(): void
-    {
-        $this->execute(function (): void {
-            $this->setUpPool();
-            $this->assertSame(3, $this->poolObject->getReconnectAttempts());
-        });
-    }
-
-    public function testPoolSetReconnectAttempts(): void
-    {
-        $this->execute(function (): void {
-            $this->setUpPool();
-            $this->assertSame(3, $this->poolObject->getReconnectAttempts());
-
-            $this->poolObject->setReconnectAttempts(20);
-
-            $this->assertSame(20, $this->poolObject->getReconnectAttempts());
-        });
-    }
-
-    public function testPoolGetReconnectSleep(): void
-    {
-        $this->execute(function (): void {
-            $this->setUpPool();
-            $this->assertSame(1, $this->poolObject->getReconnectSleep());
-        });
-    }
-
-    public function testPoolSetReconnectSleep(): void
-    {
-        $this->execute(function (): void {
-            $this->setUpPool();
-            $this->assertSame(1, $this->poolObject->getReconnectSleep());
-
-            $this->poolObject->setReconnectSleep(20);
-
-            $this->assertSame(20, $this->poolObject->getReconnectSleep());
-        });
-    }
-
-    public function testPoolGetRetryAttempts(): void
-    {
-        $this->execute(function (): void {
-            $this->setUpPool();
-            $this->assertSame(3, $this->poolObject->getRetryAttempts());
-        });
-    }
-
-    public function testPoolSetRetryAttempts(): void
-    {
-        $this->execute(function (): void {
-            $this->setUpPool();
-            $this->assertSame(3, $this->poolObject->getRetryAttempts());
-
-            $this->poolObject->setRetryAttempts(20);
-
-            $this->assertSame(20, $this->poolObject->getRetryAttempts());
-        });
-    }
-
-    public function testPoolGetRetrySleep(): void
-    {
-        $this->execute(function (): void {
-            $this->setUpPool();
-            $this->assertSame(1, $this->poolObject->getRetrySleep());
-        });
-    }
-
-    public function testPoolSetRetrySleep(): void
-    {
-        $this->execute(function (): void {
-            $this->setUpPool();
-            $this->assertSame(1, $this->poolObject->getRetrySleep());
-
-            $this->poolObject->setRetrySleep(20);
-
-            $this->assertSame(20, $this->poolObject->getRetrySleep());
+            $this->assertSame(5, $this->poolObject->size);
         });
     }
 
@@ -129,7 +54,7 @@ trait PoolTestScope
             $this->assertSame(4, $this->poolObject->count());
 
             $this->assertInstanceOf(Connection::class, $connection);
-            $this->assertSame('x', $connection->getResource());
+            $this->assertSame('x', $connection->resource);
 
             // Pop remaining 4 connections
             $this->poolObject->pop();
@@ -167,7 +92,7 @@ trait PoolTestScope
             $this->assertSame(4, $this->poolObject->count());
 
             $this->assertInstanceOf(Connection::class, $connection);
-            $this->assertSame('x', $connection->getResource());
+            $this->assertSame('x', $connection->resource);
 
             $this->assertInstanceOf(Pool::class, $this->poolObject->push($connection));
 
@@ -259,40 +184,15 @@ trait PoolTestScope
         });
     }
 
-    public function testPoolRetry(): void
-    {
-        $this->execute(function (): void {
-            $this->setUpPool();
-            $this->poolObject->setReconnectAttempts(2);
-            $this->poolObject->setReconnectSleep(2);
-
-            $this->poolObject->pop();
-            $this->poolObject->pop();
-            $this->poolObject->pop();
-            $this->poolObject->pop();
-            $this->poolObject->pop();
-
-            // Pool should be empty
-            $this->expectException(Exception::class);
-
-            $timeStart = time();
-            $this->poolObject->pop();
-            $timeEnd = time();
-
-            $timeDiff = $timeEnd - $timeStart;
-
-            $this->assertGreaterThanOrEqual(4, $timeDiff);
-        });
-    }
-
     public function testPoolDestroy(): void
     {
         $this->execute(function (): void {
             $i = 0;
-            $object = new Pool($this->getAdapter(), 'testDestroy', 2, function () use (&$i) {
-                $i++;
+            $object = new Pool($this->getAdapter(), 'testDestroy', 2, function () use (&$i): string {
+                ++$i;
+
                 return $i <= 2 ? 'x' : 'y';
-            });
+            }, timeout: 0.0);
 
             $this->assertSame(2, $object->count());
 
@@ -301,8 +201,8 @@ trait PoolTestScope
 
             $this->assertSame(0, $object->count());
 
-            $this->assertSame('x', $connection1->getResource());
-            $this->assertSame('x', $connection2->getResource());
+            $this->assertSame('x', $connection1->resource);
+            $this->assertSame('x', $connection2->resource);
 
             $object->destroy();
 
@@ -313,31 +213,55 @@ trait PoolTestScope
 
             $this->assertSame(0, $object->count());
 
-            $this->assertSame('y', $connection1->getResource());
-            $this->assertSame('y', $connection2->getResource());
+            $this->assertSame('y', $connection1->resource);
+            $this->assertSame('y', $connection2->resource);
         });
     }
 
-    public function testPopRetriesAfterConnectionCreationFailure(): void
+    public function testPopWaitsAcquireTimeoutThenThrows(): void
     {
         $this->execute(function (): void {
-            $callCount = 0;
-            $pool = new Pool($this->getAdapter(), 'test-retry', 1, function () use (&$callCount) {
-                $callCount++;
-                if ($callCount <= 1) {
-                    throw new \Exception('Connection failed');
-                }
-                return 'x';
-            });
-            $pool->setReconnectAttempts(1);
-            $pool->setReconnectSleep(0);
-            $pool->setRetrySleep(0);
+            // timeout is the whole budget: one wait, no retry loop on top.
+            $pool = new Pool($this->getAdapter(), 'test-budget', 1, fn(): string => 'x', timeout: 0.25);
+            $pool->pop();
 
-            // With the fix, pop() should retry after creation failure
-            // First attempt: createConnection fails (callCount=1), falls through
-            // Second attempt: createConnection succeeds (callCount=2)
-            $connection = $pool->pop();
-            $this->assertSame('x', $connection->getResource());
+            $start = microtime(true);
+
+            try {
+                $pool->pop();
+                $this->fail('Should have thrown');
+            } catch (Exception $e) {
+                $this->assertStringContainsString('could not provide a connection', $e->getMessage());
+            }
+
+            // Generously bounded: the point is that it is one budget, not
+            // attempts x (wait + sleep) as it used to be.
+            $this->assertLessThan(3.0, microtime(true) - $start);
+        });
+    }
+
+    public function testCreationFailureSurfacesToTheCaller(): void
+    {
+        $this->execute(function (): void {
+            // Creation is no longer retried inside the pool, and a failed create
+            // does not fall through to a wait. The caller gets init's own
+            // exception, untouched, so it keeps the type it needs to act on.
+            $calls = 0;
+            $pool = new Pool($this->getAdapter(), 'test-create-fails', 1, function () use (&$calls): string {
+                ++$calls;
+                throw new Exception('connect refused');
+            }, timeout: 0.0);
+
+            try {
+                $pool->pop();
+                $this->fail('Should have thrown');
+            } catch (Exception $e) {
+                $this->assertSame('connect refused', $e->getMessage());
+                $this->assertNull($e->getPrevious());
+            }
+
+            $this->assertSame(1, $calls);
+            $this->assertSame(1, $pool->count());
         });
     }
 
@@ -349,24 +273,57 @@ trait PoolTestScope
             // failed pop at a time.
             $pool = new Pool($this->getAdapter(), 'test-error-leak', 2, function (): string {
                 throw new \TypeError('Connection init failed');
-            });
-            $pool->setReconnectAttempts(1);
-            $pool->setReconnectSleep(0);
-            $pool->setRetryAttempts(1);
-            $pool->setRetrySleep(0);
-
+            }, timeout: 0.0);
             // More attempts than slots, so a kept reservation shows up as lost
-            // capacity by the end.
-            for ($i = 0; $i < 5; $i++) {
+            // capacity by the end. Counted rather than using fail() inside the
+            // loop, so a missing throw cannot be confused with the caught one.
+            $thrown = 0;
+            for ($i = 0; $i < 5; ++$i) {
                 try {
                     $pool->pop();
-                    $this->fail('Should have thrown');
-                } catch (Exception $e) {
-                    $this->assertInstanceOf(\TypeError::class, $e->getPrevious());
+                } catch (\Throwable $e) {
+                    ++$thrown;
+                    // An Error propagates as itself rather than being wrapped.
+                    $this->assertInstanceOf(\TypeError::class, $e);
                 }
             }
 
+            $this->assertSame(5, $thrown);
             $this->assertSame(2, $pool->count());
+        });
+    }
+
+    public function testDoubleDestroyDoesNotInflateCapacity(): void
+    {
+        $this->execute(function (): void {
+            // destroy() used to decrement reserved unconditionally, so destroying
+            // the same connection twice drove the count below the truth and let the
+            // pool create beyond its size.
+            $created = 0;
+            $pool = new Pool($this->getAdapter(), 'test-double-destroy', 2, function () use (&$created): string {
+                ++$created;
+
+                return 'x';
+            }, timeout: 0.0);
+
+            $connection = $pool->pop();
+            $pool->destroy($connection);
+            $pool->destroy($connection);
+
+            $this->assertSame(2, $pool->count());
+
+            $pool->pop();
+            $pool->pop();
+
+            try {
+                $pool->pop();
+                $this->fail('Should have thrown: the pool is at capacity');
+            } catch (Exception) {
+                // expected
+            }
+
+            // One before the destroys, two after, and never a third slot.
+            $this->assertSame(3, $created);
         });
     }
 
@@ -374,9 +331,6 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $this->setUpPool(); // size 5
-            $this->poolObject->setRetryAttempts(1);
-            $this->poolObject->setRetrySleep(0);
-
             // Pop all 5
             $this->poolObject->pop();
             $this->poolObject->pop();
@@ -397,8 +351,9 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $created = 0;
-            $pool = new Pool($this->getAdapter(), 'test-destroy-on-error', 2, function () use (&$created) {
-                $created++;
+            $pool = new Pool($this->getAdapter(), 'test-destroy-on-error', 2, function () use (&$created): \Stringable {
+                ++$created;
+
                 return new readonly class ('resource-' . $created, $created === 1) implements \Stringable {
                     public function __construct(private string $name, private bool $failRecovery) {}
 
@@ -414,10 +369,7 @@ trait PoolTestScope
                         }
                     }
                 };
-            });
-            $pool->setReconnectAttempts(1);
-            $pool->setReconnectSleep(0);
-
+            }, timeout: 0.0);
             try {
                 $pool->use(function (\Stringable $resource): void {
                     $this->assertSame('resource-1', (string) $resource);
@@ -439,8 +391,9 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $created = 0;
-            $pool = new Pool($this->getAdapter(), 'test-destroy-on-false-recovery', 2, function () use (&$created) {
-                $created++;
+            $pool = new Pool($this->getAdapter(), 'test-destroy-on-false-recovery', 2, function () use (&$created): \Stringable {
+                ++$created;
+
                 return new readonly class ('resource-' . $created) implements \Stringable {
                     public function __construct(private string $name) {}
 
@@ -454,10 +407,7 @@ trait PoolTestScope
                         return false;
                     }
                 };
-            });
-            $pool->setReconnectAttempts(1);
-            $pool->setReconnectSleep(0);
-
+            }, timeout: 0.0);
             try {
                 $pool->use(function (\Stringable $resource): void {
                     $this->assertSame('resource-1', (string) $resource);
@@ -479,8 +429,9 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $created = 0;
-            $pool = new Pool($this->getAdapter(), 'test-recover-and-reuse', 2, function () use (&$created) {
-                $created++;
+            $pool = new Pool($this->getAdapter(), 'test-recover-and-reuse', 2, function () use (&$created): \Stringable {
+                ++$created;
+
                 return new readonly class ('resource-' . $created) implements \Stringable {
                     public function __construct(private string $name) {}
 
@@ -494,10 +445,7 @@ trait PoolTestScope
                         return true;
                     }
                 };
-            });
-            $pool->setReconnectAttempts(1);
-            $pool->setReconnectSleep(0);
-
+            }, timeout: 0.0);
             try {
                 $pool->use(function (\Stringable $resource): void {
                     $this->assertSame('resource-1', (string) $resource);
@@ -518,8 +466,9 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $created = 0;
-            $pool = new Pool($this->getAdapter(), 'test-destroy-without-recovery', 2, function () use (&$created) {
-                $created++;
+            $pool = new Pool($this->getAdapter(), 'test-destroy-without-recovery', 2, function () use (&$created): \Stringable {
+                ++$created;
+
                 return new readonly class ('resource-' . $created) implements \Stringable {
                     public function __construct(private string $name) {}
 
@@ -528,10 +477,7 @@ trait PoolTestScope
                         return $this->name;
                     }
                 };
-            });
-            $pool->setReconnectAttempts(1);
-            $pool->setReconnectSleep(0);
-
+            }, timeout: 0.0);
             try {
                 $pool->use(function (\Stringable $resource): void {
                     $this->assertSame('resource-1', (string) $resource);
@@ -554,7 +500,7 @@ trait PoolTestScope
         $this->execute(function (): void {
             $created = 0;
             $pool = new Pool($this->getAdapter(), 'test-destroy-native-resource', 2, function () use (&$created) {
-                $created++;
+                ++$created;
                 $resource = fopen('php://temp', 'r+');
                 if ($resource === false) {
                     throw new \RuntimeException('Failed to open stream');
@@ -564,10 +510,7 @@ trait PoolTestScope
                 rewind($resource);
 
                 return $resource;
-            });
-            $pool->setReconnectAttempts(1);
-            $pool->setReconnectSleep(0);
-
+            }, timeout: 0.0);
             try {
                 $pool->use(function ($resource): void {
                     $this->assertSame('resource-1', stream_get_contents($resource));
@@ -588,7 +531,7 @@ trait PoolTestScope
     public function testUseForgetsConnectionWhenDestroyCleanupFails(): void
     {
         $this->execute(function (): void {
-            $adapter = new class extends \Utopia\Pools\Adapter\Stack {
+            $adapter = new class extends Stack {
                 public bool $failSynchronized = false;
 
                 public function synchronized(callable $callback): mixed
@@ -603,8 +546,9 @@ trait PoolTestScope
             };
 
             $created = 0;
-            $pool = new Pool($adapter, 'test-forget-on-destroy-failure', 1, function () use (&$created) {
-                $created++;
+            $pool = new Pool($adapter, 'test-forget-on-destroy-failure', 1, function () use (&$created): \Stringable {
+                ++$created;
+
                 return new readonly class ('resource-' . $created) implements \Stringable {
                     public function __construct(private string $name) {}
 
@@ -613,10 +557,7 @@ trait PoolTestScope
                         return $this->name;
                     }
                 };
-            });
-            $pool->setReconnectAttempts(1);
-            $pool->setReconnectSleep(0);
-
+            }, timeout: 0.0);
             try {
                 $pool->use(function (\Stringable $resource) use ($adapter): void {
                     $this->assertSame('resource-1', (string) $resource);
@@ -638,8 +579,8 @@ trait PoolTestScope
     {
         $this->execute(function (): void {
             $created = 0;
-            $pool = new Pool($this->getAdapter(), 'test-preserve-callback-error', 1, function () use (&$created) {
-                $created++;
+            $pool = new Pool($this->getAdapter(), 'test-preserve-callback-error', 1, function () use (&$created): \Stringable {
+                ++$created;
                 if ($created > 1) {
                     throw new \TypeError('Replacement failed');
                 }
@@ -657,10 +598,7 @@ trait PoolTestScope
                         throw new \RuntimeException('Recovery failed');
                     }
                 };
-            });
-            $pool->setReconnectAttempts(1);
-            $pool->setReconnectSleep(0);
-
+            }, timeout: 0.0);
             $error = null;
             try {
                 $pool->use(function (\Stringable $resource): void {
@@ -679,9 +617,8 @@ trait PoolTestScope
     public function testPoolTelemetry(): void
     {
         $this->execute(function (): void {
-            $this->setUpPool();
             $telemetry = new TestTelemetry();
-            $this->poolObject->setTelemetry($telemetry);
+            $this->poolObject = new Pool($this->getAdapter(), 'test', 5, fn(): string => 'x', timeout: 0.0, telemetry: $telemetry);
 
             $this->assertArrayHasKey('pool.connection.open.count', $telemetry->observableGauges);
             $this->assertArrayHasKey('pool.connection.active.count', $telemetry->observableGauges);
@@ -700,13 +637,14 @@ trait PoolTestScope
                         $value = $observed;
                     });
                 }
+
                 return $value;
             };
 
             $this->assertSame(5, $this->poolObject->count());
 
             $connections = [];
-            for ($i = 0; $i < 3; $i++) {
+            for ($i = 0; $i < 3; ++$i) {
                 $connections[] = $this->poolObject->pop();
             }
 
@@ -748,10 +686,8 @@ trait PoolTestScope
             // series; a single-callback gauge would drop all but the last pool to bind.
             $telemetry = new TestTelemetry();
 
-            $alpha = new Pool($this->getAdapter(), 'alpha', 5, fn() => 'x');
-            $beta = new Pool($this->getAdapter(), 'beta', 5, fn() => 'x');
-            $alpha->setTelemetry($telemetry);
-            $beta->setTelemetry($telemetry);
+            $alpha = new Pool($this->getAdapter(), 'alpha', 5, fn(): string => 'x', timeout: 0.0, telemetry: $telemetry);
+            $beta = new Pool($this->getAdapter(), 'beta', 5, fn(): string => 'x', timeout: 0.0, telemetry: $telemetry);
 
             $alpha->pop();
             $beta->pop();
@@ -763,11 +699,14 @@ trait PoolTestScope
             $series = [];
             foreach ($gauge->callbacks as $callback) {
                 $callback(function (float|int $value, iterable $attributes = []) use (&$series): void {
-                    $attrs = [];
+                    $pool = null;
                     foreach ($attributes as $key => $attr) {
-                        $attrs[$key] = $attr;
+                        if ($key === 'pool' && \is_string($attr)) {
+                            $pool = $attr;
+                        }
                     }
-                    $series[$attrs['pool']] = $value;
+                    $this->assertIsString($pool);
+                    $series[$pool] = $value;
                 });
             }
 
@@ -778,9 +717,8 @@ trait PoolTestScope
     public function testPoolUseDurationTelemetryIsCreatedOnFirstUse(): void
     {
         $this->execute(function (): void {
-            $this->setUpPool();
             $telemetry = new TestTelemetry();
-            $this->poolObject->setTelemetry($telemetry);
+            $this->poolObject = new Pool($this->getAdapter(), 'test', 5, fn(): string => 'x', timeout: 0.0, telemetry: $telemetry);
 
             $this->assertArrayNotHasKey('pool.connection.use_time', $telemetry->histograms);
 

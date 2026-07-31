@@ -2,12 +2,10 @@
 
 declare(strict_types=1);
 
-use Rector\Config\RectorConfig;
-
-return RectorConfig::configure()
-    ->withPaths([
-        __DIR__ . '/src',
-        __DIR__ . '/tests',
-    ])
-    ->withPhpSets()
-    ->withTypeCoverageLevel(0);
+// Everything the root baseline runs, plus the remaining stable prepared sets.
+return (require __DIR__ . '/../../rector.php')->withPreparedSets(
+    typeDeclarationDocblocks: true,
+    privatization: true,
+    instanceOf: true,
+    rectorPreset: true,
+);

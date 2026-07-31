@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Utopia\Tests;
 
 use PHPUnit\Framework\TestCase;
@@ -11,8 +13,8 @@ use Utopia\Tests\Scopes\PoolTestScope;
 abstract class Base extends TestCase
 {
     use ConnectionTestScope;
-    use PoolTestScope;
     use GroupTestScope;
+    use PoolTestScope;
 
     abstract protected function getAdapter(): Adapter;
 

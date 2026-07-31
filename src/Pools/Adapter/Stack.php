@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Utopia\Pools\Adapter;
 
 use Utopia\Pools\Adapter;
 
 class Stack extends Adapter
 {
-    /** @var array<mixed> $pool */
+    /** @var array<mixed> */
     protected array $pool = [];
 
     /**
@@ -17,11 +19,12 @@ class Stack extends Adapter
      * - The stack adapter does NOT enforce capacity limits.
      * - `$size` is ignored because the pool is backed by a simple array.
      *
-     * @param int $size Ignored by the stack adapter.
+     * @param  int  $size  Ignored by the stack adapter.
      */
     public function initialize(int $size): static
     {
         $this->pool = [];
+
         return $this;
     }
 
@@ -29,6 +32,7 @@ class Stack extends Adapter
     {
         // Push connection to pool
         $this->pool[] = $connection;
+
         return $this;
     }
 
@@ -38,10 +42,10 @@ class Stack extends Adapter
      * Note: The stack adapter does not support blocking operations.
      * The `$timeout` parameter is ignored.
      *
-     * @param int $timeout Ignored by the stack adapter.
+     * @param  float  $timeout  Ignored by the stack adapter.
      * @return mixed|null Returns the popped item, or null if the stack is empty.
      */
-    public function pop(int $timeout): mixed
+    public function pop(float $timeout): mixed
     {
         return array_pop($this->pool);
     }
@@ -56,7 +60,7 @@ class Stack extends Adapter
      *
      * This implementation does not provide mutual exclusion.
      *
-     * @param callable $callback Callback to execute.
+     * @param  callable  $callback  Callback to execute.
      * @return mixed The value returned by the callback.
      */
     public function synchronized(callable $callback): mixed

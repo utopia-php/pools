@@ -1,14 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Utopia\Tests\Adapter;
 
 use Swoole\Coroutine;
+use Swoole\Coroutine\Channel;
 use Utopia\Pools\Adapter\Swoole;
 use Utopia\Pools\Connection;
 use Utopia\Pools\Pool;
 use Utopia\Tests\Base;
 
-class SwooleTest extends Base
+final class SwooleTest extends Base
 {
     protected function getAdapter(): Swoole
     {
@@ -28,7 +31,7 @@ class SwooleTest extends Base
             }
         });
 
-        if ($exception !== null) {
+        if ($exception instanceof \Throwable) {
             throw $exception;
         }
 
@@ -43,43 +46,41 @@ class SwooleTest extends Base
         \Swoole\Coroutine\run(function () use (&$errors, &$successCount): void {
             // Create a pool with 5 connections inside coroutine context
             $connectionCounter = 0;
-            $pool = new Pool(new Swoole(), 'swoole-test', 5, function () use (&$connectionCounter) {
-                $connectionCounter++;
+            $pool = new Pool(new Swoole(), 'swoole-test', 5, function () use (&$connectionCounter): string {
+                ++$connectionCounter;
+
                 return "connection-{$connectionCounter}";
-            });
+            }, timeout: 5.0);
 
             // Set retry attempts to allow waiting for connections to be released
-            $pool->setRetryAttempts(3);
-            $pool->setRetrySleep(0);
-
             // Spawn 10 coroutines trying to get connections from a pool of 5
             // First 5 should get connections immediately
             // Next 5 should wait and reuse connections after they're returned
             $channels = [];
-            for ($i = 0; $i < 10; $i++) {
-                $channels[$i] = new \Swoole\Coroutine\Channel(1);
+            for ($i = 0; $i < 10; ++$i) {
+                $channels[$i] = new Channel(1);
             }
 
-            for ($i = 0; $i < 10; $i++) {
-                \Swoole\Coroutine::create(function () use ($pool, $i, &$errors, &$successCount, $channels): void {
+            for ($i = 0; $i < 10; ++$i) {
+                Coroutine::create(function () use ($pool, $i, &$errors, &$successCount, $channels): void {
                     try {
                         // Each coroutine tries to get a connection
                         $connection = $pool->pop();
 
-
-                        if (empty($connection->getID())) {
+                        if ($connection->id === '' || $connection->id === '0') {
                             $errors[] = "Coroutine {$i}: Connection has no ID";
                             $channels[$i]->push(false);
+
                             return;
                         }
 
                         // Simulate some work
-                        \Swoole\Coroutine::sleep(0.01);
+                        Coroutine::sleep(0.01);
 
                         // Return connection to pool
                         $pool->reclaim($connection);
 
-                        $successCount++;
+                        ++$successCount;
                         $channels[$i]->push(true);
                     } catch (\Exception $e) {
                         $errors[] = "Coroutine {$i}: " . $e->getMessage();
@@ -107,7 +108,7 @@ class SwooleTest extends Base
 
     public function testSwooleCoroutineHighConcurrency(): void
     {
-        if (!\extension_loaded('swoole')) {
+        if (! \extension_loaded('swoole')) {
             $this->markTestSkipped('Swoole extension is not loaded');
         }
 
@@ -118,31 +119,29 @@ class SwooleTest extends Base
         \Swoole\Coroutine\run(function () use ($totalRequests, &$successCount, &$errorCount): void {
             // Create a pool with 3 connections inside coroutine context
             $connectionCounter = 0;
-            $pool = new Pool(new Swoole(), 'swoole-concurrent', 3, function () use (&$connectionCounter) {
-                $connectionCounter++;
+            $pool = new Pool(new Swoole(), 'swoole-concurrent', 3, function () use (&$connectionCounter): string {
+                ++$connectionCounter;
+
                 return "connection-{$connectionCounter}";
-            });
-
-            $pool->setRetryAttempts(3);
-            $pool->setRetrySleep(0);
-
+            }, timeout: 5.0);
             $channels = [];
-            for ($i = 0; $i < $totalRequests; $i++) {
-                $channels[$i] = new \Swoole\Coroutine\Channel(1);
+            for ($i = 0; $i < $totalRequests; ++$i) {
+                $channels[$i] = new Channel(1);
             }
 
-            for ($i = 0; $i < $totalRequests; $i++) {
-                \Swoole\Coroutine::create(function () use ($pool, $i, &$successCount, &$errorCount, $channels): void {
+            for ($i = 0; $i < $totalRequests; ++$i) {
+                Coroutine::create(function () use ($pool, $i, &$successCount, &$errorCount, $channels): void {
                     try {
-                        $pool->use(function ($resource) use ($i) {
+                        $pool->use(function ($resource) use ($i): string {
                             // Simulate work
-                            \Swoole\Coroutine::sleep(0.01);
+                            Coroutine::sleep(0.01);
+
                             return "processed-{$i}";
                         });
-                        $successCount++;
+                        ++$successCount;
                         $channels[$i]->push(true);
                     } catch (\Exception) {
-                        $errorCount++;
+                        ++$errorCount;
                         $channels[$i]->push(false);
                     }
                 });
@@ -167,7 +166,7 @@ class SwooleTest extends Base
 
     public function testSwooleCoroutineConnectionUniqueness(): void
     {
-        if (!\extension_loaded('swoole')) {
+        if (! \extension_loaded('swoole')) {
             $this->markTestSkipped('Swoole extension is not loaded');
         }
 
@@ -177,25 +176,22 @@ class SwooleTest extends Base
         \Swoole\Coroutine\run(function () use (&$seenResources, &$duplicateResources): void {
             // Create a pool with 5 connections inside coroutine context
             $connectionCounter = 0;
-            $pool = new Pool(new Swoole(), 'swoole-uniqueness', 5, function () use (&$connectionCounter) {
-                $connectionCounter++;
+            $pool = new Pool(new Swoole(), 'swoole-uniqueness', 5, function () use (&$connectionCounter): string {
+                ++$connectionCounter;
+
                 return "connection-{$connectionCounter}";
-            });
-
-            $pool->setRetryAttempts(1);
-            $pool->setRetrySleep(0);
-
+            }, timeout: 5.0);
             $channels = [];
-            for ($i = 0; $i < 5; $i++) {
-                $channels[$i] = new \Swoole\Coroutine\Channel(1);
+            for ($i = 0; $i < 5; ++$i) {
+                $channels[$i] = new Channel(1);
             }
 
             // Get all 5 connections simultaneously
-            for ($i = 0; $i < 5; $i++) {
-                \Swoole\Coroutine::create(function () use ($pool, $i, &$seenResources, &$duplicateResources, $channels): void {
+            for ($i = 0; $i < 5; ++$i) {
+                Coroutine::create(function () use ($pool, $i, &$seenResources, &$duplicateResources, $channels): void {
                     try {
                         $connection = $pool->pop();
-                        $resource = $connection->getResource();
+                        $resource = $connection->resource;
 
                         // Check if we've seen this resource before (indicates race condition)
                         if (isset($seenResources[$resource])) {
@@ -205,7 +201,7 @@ class SwooleTest extends Base
                         }
 
                         // Hold the connection briefly
-                        \Swoole\Coroutine::sleep(0.01);
+                        Coroutine::sleep(0.01);
 
                         $channels[$i]->push(true);
                     } catch (\Exception) {
@@ -231,7 +227,7 @@ class SwooleTest extends Base
 
     public function testSwooleCoroutineIdleConnectionReuse(): void
     {
-        if (!\extension_loaded('swoole')) {
+        if (! \extension_loaded('swoole')) {
             $this->markTestSkipped('Swoole extension is not loaded');
         }
 
@@ -240,20 +236,17 @@ class SwooleTest extends Base
 
         \Swoole\Coroutine\run(function () use (&$connectionIds, &$connectionCounter): void {
             // Create a pool with 3 connections inside coroutine context
-            $pool = new Pool(new Swoole(), 'swoole-reuse', 3, function () use (&$connectionCounter) {
-                $connectionCounter++;
+            $pool = new Pool(new Swoole(), 'swoole-reuse', 3, function () use (&$connectionCounter): string {
+                ++$connectionCounter;
+
                 return "connection-{$connectionCounter}";
-            });
-
-            $pool->setRetryAttempts(1);
-            $pool->setRetrySleep(0);
-
+            }, timeout: 5.0);
             // First wave: Create 3 connections
             $firstWave = [];
-            for ($i = 0; $i < 3; $i++) {
+            for ($i = 0; $i < 3; ++$i) {
                 $conn = $pool->pop();
                 $firstWave[] = $conn;
-                $connectionIds['first'][] = $conn->getID();
+                $connectionIds['first'][] = $conn->id;
             }
 
             // Return all connections
@@ -263,10 +256,10 @@ class SwooleTest extends Base
 
             // Second wave: Should reuse the same 3 connections
             $secondWave = [];
-            for ($i = 0; $i < 3; $i++) {
+            for ($i = 0; $i < 3; ++$i) {
                 $conn = $pool->pop();
                 $secondWave[] = $conn;
-                $connectionIds['second'][] = $conn->getID();
+                $connectionIds['second'][] = $conn->id;
             }
 
             // Return all connections
@@ -288,7 +281,7 @@ class SwooleTest extends Base
 
     public function testSwooleCoroutineStressTest(): void
     {
-        if (!\extension_loaded('swoole')) {
+        if (! \extension_loaded('swoole')) {
             $this->markTestSkipped('Swoole extension is not loaded');
         }
 
@@ -299,31 +292,29 @@ class SwooleTest extends Base
 
         \Swoole\Coroutine\run(function () use ($totalRequests, &$successCount, &$errorCount, &$connectionCounter): void {
             // Create a pool with 10 connections inside coroutine context
-            $pool = new Pool(new Swoole(), 'swoole-stress', 10, function () use (&$connectionCounter) {
-                $connectionCounter++;
+            $pool = new Pool(new Swoole(), 'swoole-stress', 10, function () use (&$connectionCounter): string {
+                ++$connectionCounter;
+
                 return "connection-{$connectionCounter}";
-            });
-
-            $pool->setRetryAttempts(10);
-            $pool->setRetrySleep(0);
-
+            }, timeout: 5.0);
             $channels = [];
-            for ($i = 0; $i < $totalRequests; $i++) {
-                $channels[$i] = new \Swoole\Coroutine\Channel(1);
+            for ($i = 0; $i < $totalRequests; ++$i) {
+                $channels[$i] = new Channel(1);
             }
 
-            for ($i = 0; $i < $totalRequests; $i++) {
-                \Swoole\Coroutine::create(function () use ($pool, $i, &$successCount, &$errorCount, $channels): void {
+            for ($i = 0; $i < $totalRequests; ++$i) {
+                Coroutine::create(function () use ($pool, $i, &$successCount, &$errorCount, $channels): void {
                     try {
                         $pool->use(function ($resource) {
                             // Simulate variable work duration
-                            \Swoole\Coroutine::sleep(0.001 * random_int(1, 5));
+                            Coroutine::sleep(0.001 * random_int(1, 5));
+
                             return $resource;
                         });
-                        $successCount++;
+                        ++$successCount;
                         $channels[$i]->push(true);
                     } catch (\Exception) {
-                        $errorCount++;
+                        ++$errorCount;
                         $channels[$i]->push(false);
                     }
                 });
@@ -341,9 +332,10 @@ class SwooleTest extends Base
             $this->assertSame(10, $pool->count(), 'Pool should have all connections back');
         });
     }
-    public function testInitOutsideCoroutineNotThrowAnyError(): void
+
+    public function testInitOutsideCoroutineDoesNotThrow(): void
     {
-        $pool = new Pool(new Swoole(), 'test', 1, fn() => 'x');
+        $pool = new Pool(new Swoole(), 'test', 1, fn(): string => 'x', timeout: 0.0);
         $this->assertInstanceOf(Pool::class, $pool);
     }
 }

@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Utopia\Tests\Adapter;
 
 use Utopia\Pools\Adapter\Stack;
 use Utopia\Tests\Base;
 
-class StackTest extends Base
+final class StackTest extends Base
 {
     protected function getAdapter(): Stack
     {

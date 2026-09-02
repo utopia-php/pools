@@ -233,6 +233,99 @@ class Pool
     }
 
     /**
+     * Ask every idle resource to run its own upkeep.
+     *
+     * A pooled connection nobody checks out is not a connection nothing happens
+     * to: the server on the other end is still counting silence, and protocols
+     * that reap an idle peer (NATS closes after two missed pings) hand the next
+     * caller a socket that is already gone. The resource knows how to keep
+     * itself alive; what it lacks is a clock. The pool has no clock either, so
+     * a host that wants idle resources kept alive calls this on an interval
+     * shorter than the shortest server-side deadline it is holding.
+     *
+     * Duck-typed on `tick()` for the same reason {@see self::recover()} probes
+     * for `reset()`/`reconnect()`: pools depends on no driver, so the capability
+     * is discovered rather than declared. Resources without one are left alone,
+     * which is what makes this safe to call on every pool a host owns.
+     *
+     * Resources are taken and returned one at a time rather than under a single
+     * lock, because a tick writes to the network and holding the pool's lock
+     * across that would stall every pop() for the duration. The cost is that a
+     * resource checked out mid-sweep is simply not ticked this round — it has an
+     * active caller, which is the traffic the tick exists to substitute for.
+     */
+    public function maintain(): static
+    {
+        /** @var list<Connection<TResource>> $taken */
+        $taken = [];
+
+        try {
+            // Drain before ticking. Adapters are free to choose their own order
+            // — Stack is LIFO, Swoole's channel is FIFO — so popping and pushing
+            // one at a time hands the same resource straight back on a LIFO
+            // adapter and leaves every other one unswept.
+            for ($remaining = $this->adapter->count(); $remaining > 0; --$remaining) {
+                $connection = $this->adapter->pop(0.0);
+
+                if (! $connection instanceof Connection) {
+                    break; // a concurrent pop() drained the idle set ahead of us
+                }
+
+                $taken[] = $connection;
+            }
+
+            // foreach iterates a snapshot, so dropping each entry as it is dealt
+            // with leaves $taken holding exactly what the finally still owes.
+            foreach ($taken as $index => $connection) {
+                unset($taken[$index]);
+
+                try {
+                    $resource = $connection->resource;
+
+                    if (\is_object($resource) && method_exists($resource, 'tick')) {
+                        $resource->tick();
+                    }
+                } catch (\Throwable) {
+                    // A resource that cannot keep itself alive must not go back
+                    // on the idle set: returning it hands the failure to the
+                    // next caller as a mid-request error instead of a connect.
+                    $this->releaseIdleSlot();
+
+                    continue;
+                }
+
+                // Returned as soon as its own tick is done rather than at the
+                // end, so the idle set refills while the sweep is still running.
+                $this->adapter->push($connection);
+            }
+        } finally {
+            // A resource stranded outside the pool is capacity lost for the
+            // life of the process, so an interrupted sweep still hands back
+            // everything it is holding.
+            foreach ($taken as $connection) {
+                $this->adapter->push($connection);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Give back the capacity of a connection that was dropped from the idle set.
+     *
+     * {@see self::destroy()} cannot serve here: it releases capacity only for
+     * connections in $active, and an idle one by definition is not. The
+     * resource still exists though, so its slot is still counted in $reserved
+     * and has to be given back or the pool shrinks by one every sweep.
+     */
+    private function releaseIdleSlot(): void
+    {
+        $this->adapter->synchronized(function (): void {
+            --$this->reserved;
+        });
+    }
+
+    /**
      * Take a connection, creating one if there is spare capacity and otherwise
      * waiting up to timeout for one to come back.
      *

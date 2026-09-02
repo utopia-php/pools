@@ -732,4 +732,105 @@ trait PoolTestScope
             $this->assertCount(1, $useHistogram->values);
         });
     }
+
+    /**
+     * A pool of resources that count their own ticks, so a sweep is observable.
+     *
+     * @param  \Closure(): void|null  $onTick  Runs inside tick(), to fail one.
+     * @return Pool<TickingResource>
+     */
+    private function tickingPool(string $name, int $size, ?\Closure $onTick = null): Pool
+    {
+        $created = 0;
+
+        return new Pool($this->getAdapter(), $name, $size, function () use (&$created, $onTick): TickingResource {
+            ++$created;
+
+            return new TickingResource($created, $onTick);
+        }, timeout: 0.0);
+    }
+
+    public function testMaintainTicksEveryIdleResource(): void
+    {
+        $this->execute(function (): void {
+            $pool = $this->tickingPool('test-maintain-ticks', 3);
+
+            // Create three, then hand them all back so the whole set is idle.
+            $connections = [$pool->pop(), $pool->pop(), $pool->pop()];
+            foreach ($connections as $connection) {
+                $pool->reclaim($connection);
+            }
+
+            $pool->maintain();
+
+            foreach ($connections as $connection) {
+                $this->assertSame(1, $connection->resource->ticks);
+            }
+
+            // The sweep is not a checkout: every resource is still available.
+            $this->assertSame(3, $pool->count());
+        });
+    }
+
+    public function testMaintainLeavesCheckedOutResourcesUntouched(): void
+    {
+        $this->execute(function (): void {
+            $pool = $this->tickingPool('test-maintain-active', 2);
+
+            $idle = $pool->pop();
+            $active = $pool->pop();
+            $pool->reclaim($idle);
+
+            $pool->maintain();
+
+            // The active one has a caller driving it; that is the traffic the
+            // tick substitutes for, and ticking it would race that caller.
+            $this->assertSame(1, $idle->resource->ticks);
+            $this->assertSame(0, $active->resource->ticks);
+        });
+    }
+
+    public function testMaintainIgnoresResourcesThatCannotTick(): void
+    {
+        $this->execute(function (): void {
+            $pool = new Pool($this->getAdapter(), 'test-maintain-no-tick', 2, fn(): string => 'x', timeout: 0.0);
+
+            $connection = $pool->pop();
+            $pool->reclaim($connection);
+
+            // A string resource has no tick(); the sweep must be a no-op rather
+            // than an error, so a host can call it on every pool it owns.
+            $pool->maintain();
+
+            $this->assertSame(2, $pool->count());
+            $pool->use(function ($resource): void {
+                $this->assertSame('x', $resource);
+            });
+        });
+    }
+
+    public function testMaintainDiscardsResourceWhoseTickThrows(): void
+    {
+        $this->execute(function (): void {
+            $pool = $this->tickingPool('test-maintain-discard', 2, function (): void {
+                throw new \RuntimeException('server closed the connection');
+            });
+
+            $dead = $pool->pop();
+            $pool->reclaim($dead);
+
+            $pool->maintain();
+
+            // The dead resource is gone but its slot is not: the pool must not
+            // shrink by one on every sweep.
+            $this->assertSame(2, $pool->count());
+
+            // And the next caller gets a freshly created resource, not the one
+            // that just failed to keep itself alive.
+            $deadSerial = $dead->resource->serial;
+            $pool->use(function (TickingResource $resource) use ($deadSerial): void {
+                $this->assertNotSame($deadSerial, $resource->serial);
+            });
+        });
+    }
 }
